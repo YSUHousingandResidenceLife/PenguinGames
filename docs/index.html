@@ -384,24 +384,32 @@ function showSoldOutUI() {
   const hint   = document.querySelector("#hint");
   const canvas = document.querySelector("#scratch");
   const banner = document.querySelector("#globalBanner");
+  const result = document.querySelector("#result");
 
+  // Put SOLD OUT on the card
   if (label) label.textContent = "SOLD OUT";
   if (prize) prize.textContent = "";
   if (code)  code.textContent  = "";
 
-  if (hint) hint.style.display = "none";
+  // Reveal the card content
+  if (result) {
+    result.classList.add("revealed");
+    result.classList.add("soldout");   // optional extra styling
+  }
+
+  // Hide scratch overlay + hint
+  if (hint)   hint.style.display = "none";
   if (canvas) {
     canvas.style.pointerEvents = "none";
     canvas.style.opacity = 0;
   }
 
-  if (banner) {
-    banner.textContent = "All cards have been claimed. Thanks for playing!";
-    banner.style.display = "block";
-  }
+  // Hide the banner (don’t show text at the top)
+  if (banner) banner.style.display = "none";
 
   try { localStorage.removeItem("pg_claim_v1"); } catch {}
 }
+
   
 /* ============= Flow ============= */
 (async function main(){
