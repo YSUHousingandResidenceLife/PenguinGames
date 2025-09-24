@@ -1,28 +1,105 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Penguin Games — Scratch to Reveal</title>
+<style>
+  :root{
+    --bg:#0b132b; --card:#0f1a3a; --text:#eef3ff; --muted:#a7b3c8;
+    --win:#22c55e; --lose:#ef4444; --accent:#ffd34d;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0; min-height:100dvh; display:grid; place-items:center; padding:24px;
+    background:var(--bg); color:var(--text); font-family:system-ui,-apple-system,Segoe UI,Roboto,Inter,sans-serif;
+  }
+  .wrap{width:100%; max-width:720px}
+  header{display:flex; gap:12px; align-items:center; margin-bottom:12px}
+  .logo{width:44px;height:44px;border-radius:12px;background:var(--accent);display:grid;place-items:center;color:#111;font-weight:900}
+  h1{margin:0;font-size:24px}
+  .muted{color:var(--muted)}
+  .card{background:var(--card); border:1px solid #ffffff1a; border-radius:18px; padding:18px; box-shadow:0 12px 28px rgba(0,0,0,.35)}
+  .meta{display:flex; flex-wrap:wrap; gap:10px; font-size:13px; margin-bottom:8px}
+  .pill{background:#ffffff10; padding:6px 10px; border-radius:999px}
+  .stage{
+    position:relative; width:100%; aspect-ratio:16/9; border-radius:14px; overflow:hidden; margin:10px 0;
+    border:1px solid #ffffff12; background:#000 center/cover no-repeat;
+    display:grid; place-items:center;
+  }
+  .reveal{text-align:center; padding:14px; text-shadow:0 2px 18px rgba(0,0,0,.45)}
+  .big{font-size:clamp(24px,5vw,40px); font-weight:900; letter-spacing:.3px}
+  .t-win{color:var(--win)} .t-lose{color:var(--lose)}
+  .note{font-size:12px; color:var(--muted); margin-top:6px}
+  canvas{position:absolute; inset:0; width:100%; height:100%; display:block}
+  .wm{position:absolute; right:10px; bottom:10px; font-size:10px; color:#000b; background:#fffb; padding:4px 6px; border-radius:6px}
+  .hidden{display:none}
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <div class="logo">🐧</div>
+      <div>
+        <h1>Penguin Games — Scratch & Reveal</h1>
+        <div class="muted">Scratch the gold layer to reveal your result. One device = one card per event.</div>
+      </div>
+    </header>
+
+    <div class="card">
+      <div class="meta">
+        <div class="pill" id="pillEvent">Event: —</div>
+        <div class="pill">This device locks after reveal</div>
+      </div>
+
+      <div class="stage" id="stage">
+        <!-- Revealed content (beneath overlay) -->
+        <div class="reveal">
+          <div class="muted">Your result:</div>
+          <div class="big" id="prize">—</div>
+          <div class="muted" style="margin-top:6px">Claim code:</div>
+          <div class="big" id="code">—</div>
+        </div>
+
+        <!-- Gold scratch overlay -->
+        <canvas id="overlay"></canvas>
+        <div class="wm">Penguin Games</div>
+      </div>
+
+      <div id="already" class="note hidden">You already scratched on this device for this event. Your result is unchanged.</div>
+      <div class="note">Only claims from the official FB post are valid. We verify account + code.</div>
+    </div>
+  </div>
+
 <script>
 /* =========================
    CONFIG
    ========================= */
-const BACKGROUND_IMAGE_URL = "https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?q=80&w=1600&auto=format&fit=crop"; 
-const WIN_PROBABILITY = 0.20;  // 20% chance of winning
-const EVENT_MODE = "auto-week";
-const FIXED_EVENT_ID = "ysu-event-1";
+// Replace with an image in your repo when ready, e.g. "./assets/ysu-bg.jpg"
+const BACKGROUND_IMAGE_URL = "https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?q=80&w=1600&auto=format&fit=crop";
+const WIN_PROBABILITY = 0.20;  // 20% chance per device
+const EVENT_MODE = "auto-week"; // "auto-week" | "auto-day" | "fixed"
+const FIXED_EVENT_ID = "ysu-event-1"; // used only if EVENT_MODE="fixed"
 
-/* Prize pool weights (approximate distribution) */
+// Prize mix when a device wins
 const PRIZES = [
   {label:"WATER BOTTLE", weight:7},
-  {label:"CROSS BAG", weight:8},
-  {label:"LANYARD", weight:5}
+  {label:"CROSS BAG",    weight:8},
+  {label:"LANYARD",      weight:5}
 ];
 
 /* =========================
-   EVENT ID
+   EVENT KEY (auto reset)
    ========================= */
 function getEventId(){
   const url = new URL(location.href);
   const override = url.searchParams.get("event");
   if (override) return `ev-${override}`;
   const d = new Date();
-  if (EVENT_MODE==="auto-day") return `ev-${d.getUTCFullYear()}${d.getUTCMonth()+1}${d.getUTCDate()}`;
+  if (EVENT_MODE==="auto-day") {
+    const y=d.getUTCFullYear(), m=String(d.getUTCMonth()+1).padStart(2,'0'), day=String(d.getUTCDate()).padStart(2,'0');
+    return `ev-${y}${m}${day}`;
+  }
   if (EVENT_MODE==="auto-week"){
     const tmp=new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()));
     const dayNum=(tmp.getUTCDay()+6)%7;
@@ -40,75 +117,78 @@ document.getElementById('pillEvent').textContent = `Event: ${EVENT_ID}`;
    ONE PLAY PER DEVICE
    ========================= */
 const PLAY_KEY = `pg_play_${EVENT_ID}`;
-let stored = localStorage.getItem(PLAY_KEY);
+let stored = null;
+try { stored = localStorage.getItem(PLAY_KEY); } catch(e){}
 let result;
 
-function randomCode(len=6){
+function secureRandomCode(len=6){
   const chars="ABCDEFGHJKMNPQRSTUVWXYZ23456789";
   let out="YSU-";
-  const buf=new Uint32Array(len);
-  crypto.getRandomValues(buf);
-  for(let i=0;i<len;i++) out+=chars[buf[i]%chars.length];
+  if (typeof window !== "undefined" && window.crypto && crypto.getRandomValues) {
+    const buf=new Uint32Array(len);
+    crypto.getRandomValues(buf);
+    for (let i=0;i<len;i++) out += chars[buf[i]%chars.length];
+  } else {
+    for (let i=0;i<len;i++) out += chars[Math.floor(Math.random()*chars.length)];
+  }
   return out;
 }
 
-/* Pick random prize weighted */
-function pickPrize(){
+function pickPrizeWeighted(){
   const total = PRIZES.reduce((a,p)=>a+p.weight,0);
   let r = Math.random()*total;
-  for(const p of PRIZES){
-    if(r<p.weight) return p.label;
-    r-=p.weight;
-  }
-  return PRIZES[0].label;
+  for (const p of PRIZES){ if (r < p.weight) return p.label; r -= p.weight; }
+  return PRIZES[0].label; // fallback
 }
 
+// Use saved result if present (prevents replay on this device)
 if (stored){
-  try{ result=JSON.parse(stored);}catch{}
+  try { result = JSON.parse(stored); } catch(e){ result = null; }
 }
-if(!result){
-  const win = Math.random()<WIN_PROBABILITY;
+if (!result){
+  const win = Math.random() < WIN_PROBABILITY;
   result = {
-    prize: win ? pickPrize() : "SORRY",
-    code: randomCode()
+    prize: win ? pickPrizeWeighted() : "SORRY",
+    code: secureRandomCode()
   };
-  localStorage.setItem(PLAY_KEY, JSON.stringify(result));
+  try { localStorage.setItem(PLAY_KEY, JSON.stringify(result)); } catch(e){}
 }
 
 /* =========================
    UI
    ========================= */
-const stage=document.getElementById("stage");
-stage.style.backgroundImage=`url("${BACKGROUND_IMAGE_URL}")`;
+const stage = document.getElementById('stage');
+stage.style.backgroundImage = `url("${BACKGROUND_IMAGE_URL}")`;
 
-const prizeEl=document.getElementById("prize");
-const codeEl=document.getElementById("code");
-const already=document.getElementById("already");
+const prizeEl = document.getElementById('prize');
+const codeEl  = document.getElementById('code');
+const already = document.getElementById('already');
 
-prizeEl.textContent = result.prize==="SORRY" ? "😅 SORRY" : "🎉 "+result.prize;
-prizeEl.classList.add(result.prize==="SORRY"?"t-lose":"t-win");
-codeEl.textContent=result.code;
+prizeEl.textContent = result.prize === "SORRY" ? "😅 SORRY" : "🎉 " + result.prize;
+prizeEl.classList.add(result.prize === "SORRY" ? "t-lose" : "t-win");
+codeEl.textContent = result.code;
 
-if(stored) already.classList.remove("hidden");
+if (stored) already.classList.remove('hidden');
 
 /* =========================
    GOLD SCRATCH OVERLAY
    ========================= */
-const cvs=document.getElementById("overlay");
-const ctx=cvs.getContext("2d");
-let down=false,revealed=false;
+const cvs = document.getElementById('overlay');
+const ctx = cvs.getContext('2d');
+let down=false, revealed=false;
 
 function sizeCanvas(){
-  const r=stage.getBoundingClientRect();
-  cvs.width=Math.round(r.width*devicePixelRatio);
-  cvs.height=Math.round(r.height*devicePixelRatio);
-  cvs.style.width=r.width+"px";
-  cvs.style.height=r.height+"px";
-  ctx.setTransform(devicePixelRatio,0,0,devicePixelRatio,0,0);
-  drawGold(r.width,r.height);
+  const r = stage.getBoundingClientRect();
+  cvs.width  = Math.round(r.width  * (window.devicePixelRatio || 1));
+  cvs.height = Math.round(r.height * (window.devicePixelRatio || 1));
+  cvs.style.width  = r.width + 'px';
+  cvs.style.height = r.height + 'px';
+  ctx.setTransform((window.devicePixelRatio || 1),0,0,(window.devicePixelRatio || 1),0,0);
+  drawGold(r.width, r.height);
 }
 function drawGold(w,h){
-  const g1=ctx.createLinearGradient(0,0,w,h);
+  // Clean gold gradient (no stripes)
+  const g1 = ctx.createLinearGradient(0,0,w,h);
   g1.addColorStop(0.00,"#b8860b");
   g1.addColorStop(0.25,"#ffd700");
   g1.addColorStop(0.50,"#fff8dc");
@@ -117,25 +197,52 @@ function drawGold(w,h){
   ctx.globalCompositeOperation="source-over";
   ctx.fillStyle=g1; ctx.fillRect(0,0,w,h);
 
-  // Clean solid overlay (no lines)
+  // Title on top of gold
   ctx.globalCompositeOperation="source-over";
-  ctx.font=`800 ${Math.max(20,Math.floor(w*0.06))}px Inter,system-ui,sans-serif`;
+  ctx.font = `800 ${Math.max(20, Math.floor(w*0.06))}px Inter, system-ui, sans-serif`;
   ctx.textAlign="center"; ctx.textBaseline="middle";
   ctx.fillStyle="rgba(0,0,0,.35)";
   ctx.fillText("SCRATCH TO REVEAL", w/2, h/2);
+
+  // Now switch to erase on touch/mouse
   ctx.globalCompositeOperation="destination-out";
 }
-function pos(e){const r=cvs.getBoundingClientRect();const t=e.touches?e.touches[0]:e;return{x:t.clientX-r.left,y:t.clientY-r.top};}
-function scratch(e){const p=pos(e);const rad=Math.max(18,cvs.width/devicePixelRatio*0.035);ctx.beginPath();ctx.arc(p.x,p.y,rad,0,Math.PI*2);ctx.fill();}
-function scratched(){const w=cvs.width/devicePixelRatio,h=cvs.height/devicePixelRatio,img=ctx.getImageData(0,0,w,h).data;let clear=0,total=0,step=24*4;for(let i=3;i<img.length;i+=step){if(img[i]===0) clear++; total++;}return clear/total;}
-function tryReveal(){if(!revealed&&scratched()>0.45){revealed=true;ctx.globalCompositeOperation="destination-out";ctx.fillRect(0,0,cvs.width,cvs.height);}}
+function pos(e){
+  const r = cvs.getBoundingClientRect();
+  const t = e.touches ? e.touches[0] : e;
+  return { x: t.clientX - r.left, y: t.clientY - r.top };
+}
+function scratch(e){
+  const p = pos(e);
+  const dpr = (window.devicePixelRatio || 1);
+  const rad = Math.max(18, (cvs.width/dpr)*0.035);
+  ctx.beginPath(); ctx.arc(p.x, p.y, rad, 0, Math.PI*2); ctx.fill();
+}
+function scratched(){
+  // estimate cleared %
+  const dpr = (window.devicePixelRatio || 1);
+  const w = Math.round(cvs.width/dpr), h = Math.round(cvs.height/dpr);
+  const img = ctx.getImageData(0,0,w,h).data;
+  let clear=0,total=0, step=24*4;
+  for (let i=3;i<img.length;i+=step){ if (img[i]===0) clear++; total++; }
+  return clear/total;
+}
+function tryReveal(){
+  if (!revealed && scratched()>0.45){
+    revealed = true;
+    ctx.globalCompositeOperation="destination-out";
+    ctx.fillRect(0,0,cvs.width,cvs.height);
+  }
+}
 
-cvs.addEventListener("mousedown",e=>{down=true;scratch(e);});
-cvs.addEventListener("mousemove",e=>{if(down){scratch(e);tryReveal();}});
-window.addEventListener("mouseup",()=>{down=false;});
-cvs.addEventListener("touchstart",e=>{down=true;scratch(e);},{passive:true});
-cvs.addEventListener("touchmove",e=>{if(down){scratch(e);tryReveal();}},{passive:true});
-cvs.addEventListener("touchend",()=>{down=false;});
-window.addEventListener("resize",sizeCanvas);
+cvs.addEventListener("mousedown", e=>{down=true; scratch(e);});
+cvs.addEventListener("mousemove", e=>{if(down){scratch(e); tryReveal();}});
+window.addEventListener("mouseup", ()=>{down=false;});
+cvs.addEventListener("touchstart", e=>{down=true; scratch(e);},{passive:true});
+cvs.addEventListener("touchmove", e=>{if(down){scratch(e); tryReveal();}},{passive:true});
+cvs.addEventListener("touchend", ()=>{down=false;});
+window.addEventListener("resize", sizeCanvas);
 sizeCanvas();
 </script>
+</body>
+</html>
