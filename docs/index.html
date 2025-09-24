@@ -376,6 +376,33 @@ function initScratch(onReveal){
   };
 }
 
+// Helper to show SOLD OUT state
+function showSoldOutUI() {
+  const label  = document.querySelector("#label");
+  const prize  = document.querySelector("#prize");
+  const code   = document.querySelector("#code");
+  const hint   = document.querySelector("#hint");
+  const canvas = document.querySelector("#scratch");
+  const banner = document.querySelector("#globalBanner");
+
+  if (label) label.textContent = "SOLD OUT";
+  if (prize) prize.textContent = "";
+  if (code)  code.textContent  = "";
+
+  if (hint) hint.style.display = "none";
+  if (canvas) {
+    canvas.style.pointerEvents = "none";
+    canvas.style.opacity = 0;
+  }
+
+  if (banner) {
+    banner.textContent = "All cards have been claimed. Thanks for playing!";
+    banner.style.display = "block";
+  }
+
+  try { localStorage.removeItem("pg_claim_v1"); } catch {}
+}
+  
 /* ============= Flow ============= */
 (async function main(){
   $("#globalBanner").style.display = "none";
