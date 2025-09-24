@@ -446,20 +446,20 @@ async function rollAndRender(isDebug){
       if(pick.type === "WIN"){
         if(window.__claiming) return;
         window.__claiming = true;
-claimCodeJSONP(pick.code, (res)=>{
+claimCodeJSONP(pick.code, (res) => {
   window.__claiming = false;
 
   // 🔴 NEW: check if all codes are gone
-  if(res && res.soldOut){
+  if (res && res.soldOut) {
     showSoldOutUI();
     return;
   }
 
-  if(res && res.ok){
+  if (res && res.ok) {
     setStored(pick);
-  }else{
-    renderResultText({type:"LOSE"});
-    setStored({type:"LOSE"});
+  } else {
+    renderResultText({ type: "LOSE" });
+    setStored({ type: "LOSE" });
   }
 });
 
