@@ -48,7 +48,7 @@
     font-weight:800;
     letter-spacing:.08em;
     text-transform:uppercase;
-    font-size: clamp(18px, 2.4vw, 28px); /* larger */
+    font-size: clamp(20px, 2.6vw, 30px); /* bigger */
     display:flex; gap:10px; align-items:center;
     opacity:.95;
   }
@@ -70,13 +70,24 @@
     place-items:center;
   }
 
+  .hint{
+    position:absolute; inset:auto 0 18px 0;
+    text-align:center; font-size: clamp(14px, 2.2vw, 18px);
+    letter-spacing:.08em; opacity:.9; pointer-events:none;
+    text-shadow:0 2px 8px rgba(0,0,0,.5);
+  }
+
   .result{
     z-index:1;
     text-align:center;
     user-select:none;
     pointer-events:none;
     padding: 0 16px;
+    opacity:0; /* hidden until scratched enough */
+    transition: opacity .25s ease-out;
   }
+  .result.revealed{ opacity:1; }
+
   .result .label{
     font-size: clamp(22px, 3.8vw, 44px);
     letter-spacing:.22em;
@@ -127,17 +138,17 @@
   .btn[hidden]{ display:none; }
 
   .notice{
-    font-size: clamp(15px, 1.8vw, 18px); /* larger */
-    opacity:.9; margin-top:10px;
+    font-size: clamp(18px, 2.2vw, 22px); /* bigger per request */
+    opacity:.95; margin-top:12px; text-align:center; max-width:var(--card-w);
   }
   .notice b, .notice strong { color: #ffe08a; }
 
   .already{
     background:#1d242d;
     border:1px solid #ffffff18;
-    padding:12px 14px; border-radius:12px;
-    margin-top:10px;
-    font-size: clamp(15px, 1.8vw, 18px); /* larger */
+    padding:14px 16px; border-radius:12px;
+    margin-top:12px;
+    font-size: clamp(18px, 2.2vw, 22px); /* bigger */
     opacity:.96;
     text-align:center;
     max-width: var(--card-w);
@@ -148,7 +159,7 @@
     transform:translateX(-50%);
     background:#151b22; border:1px solid #ffffff14;
     color:#e8edf6; padding:10px 14px; border-radius:12px;
-    font-size: clamp(14px, 1.8vw, 18px);
+    font-size: clamp(16px, 2vw, 20px);
     letter-spacing:.02em;
     display:none; /* hidden by default on static site */
   }
@@ -166,6 +177,7 @@
         <div class="prize" id="prize"></div>
         <div class="code"  id="code"></div>
       </div>
+      <div class="hint" id="hint">Scratch the gold to reveal your result</div>
       <canvas id="scratch"></canvas>
     </div>
 
@@ -261,14 +273,14 @@ function clearStored(){ localStorage.removeItem(STORAGE_KEY); }
 /* ========================
    Render result
 ======================== */
-function showResult(obj){
+function renderResultText(obj){
   const label = $("#label");
   const prize = $("#prize");
   const code  = $("#code");
   if(obj.type === "WIN"){
     label.textContent = "WIN!";
     prize.textContent = obj.prize;
-    code.textContent  = obj.code;   // real code visible even in debug
+    code.textContent  = obj.code;
   }else{
     label.textContent = "SORRY!";
     prize.textContent = "";
@@ -294,7 +306,7 @@ function drawGold(ctx, w, h){
   ctx.globalCompositeOperation="source-over";
 }
 
-function initScratch(){
+function initScratch(onReveal){
   const c = $("#scratch");
   const card = $("#card");
   const rect = card.getBoundingClientRect();
@@ -303,7 +315,7 @@ function initScratch(){
   const ctx = c.getContext("2d");
   drawGold(ctx, c.width, c.height);
 
-  let scratching = false;
+  let scratching = false, revealed = false;
   function scratch(x,y){
     ctx.globalCompositeOperation='destination-out';
     ctx.beginPath();
@@ -324,13 +336,30 @@ function initScratch(){
       let transparent = 0;
       for(let i=3;i<pixels.length;i+=4){ if(pixels[i]===0) transparent++; }
       const percent = transparent / (c.width*c.height) * 100;
-      if(percent > 60){
+      if(!revealed && percent > 60){
+        revealed = true;
+        $("#result").classList.add("revealed");
+        $("#hint").style.display = "none";
+        // disable further scratching
         c.style.pointerEvents = "none";
         c.style.opacity = 0;
         c.style.transition = "opacity .35s ease-out";
+        if(typeof onReveal === "function") onReveal();
       }
     }, 80);
   }, {passive:true});
+
+  // return a resetter for re-roll
+  return function resetOverlay(){
+    ctx.globalCompositeOperation = "source-over";
+    ctx.clearRect(0,0,c.width,c.height);
+    drawGold(ctx, c.width, c.height);
+    c.style.pointerEvents = "auto";
+    c.style.opacity = 1;
+    revealed = false;
+    $("#result").classList.remove("revealed");
+    $("#hint").style.display = "block";
+  };
 }
 
 /* ========================
@@ -344,16 +373,17 @@ function initScratch(){
     $("#resetBtn").hidden = false;
     $("#rerollBtn").hidden = false;
     $("#resetBtn").onclick = ()=>{ clearStored(); location.reload(); };
-    $("#rerollBtn").onclick = ()=>{ clearStored(); rollAndRender(true); };
   }
 
-  // If already played on this device (live mode), show stored
+  // In LIVE mode, respect one-play-per-device
   const existing = getStored();
   if(existing && !DEBUG){
-    showResult(existing);
+    renderResultText(existing);
+    $("#result").classList.add("revealed");
     $("#already").hidden = false;
     $("#scratch").style.pointerEvents="none";
     $("#scratch").style.opacity=0;
+    $("#hint").style.display = "none";
     return;
   }
 
@@ -364,51 +394,43 @@ async function rollAndRender(isDebug){
   const winners = await loadWinners();
   const deck    = buildLocalDeck(winners);
 
-  // Draw scratch overlay
-  initScratch();
+  // pick a random card
+  let pick = deck[Math.floor(Math.random()*deck.length)] || {type:"LOSE"};
 
-  // Random pick
-  const pick = deck[Math.floor(Math.random()*deck.length)] || {type:"LOSE"};
+  // pre-render text but keep hidden until scratch reveal
+  renderResultText(pick);
 
-  // If winner: ensure we have a code/prize (fallback safe)
-  let result = pick;
-  if (pick.type === "WIN") {
-    if (!pick.prize || !pick.code) {
-      result = { type: "LOSE" };
+  // init scratch overlay; when reveal happens, run claim logic (live only)
+  const resetOverlay = initScratch(()=>{
+    if(!isDebug){
+      if(pick.type === "WIN"){
+        if (window.__claiming) return;
+        window.__claiming = true;
+        claimCodeJSONP(pick.code, (res)=>{
+          window.__claiming = false;
+          if(res && res.ok){
+            setStored(pick);
+          }else{
+            // convert to SORRY locally if already taken
+            renderResultText({type:"LOSE"});
+            setStored({type:"LOSE"});
+          }
+        });
+      }else{
+        setStored(pick);
+      }
     }
-  }
+  });
 
-  // Render immediately (under the gold)
-  showResult(result);
-
-  // Behavior differs in debug vs live
-  if (!isDebug) {
-    // LIVE: lock per-device & (if WIN) claim in the Sheet
-    if (result.type === "WIN") {
-      if (window.__claiming) return;
-      window.__claiming = true;
-
-      claimCodeJSONP(result.code, (res) => {
-        window.__claiming = false;
-
-        if (res && res.ok) {
-          setStored(result); // success: keep win on this device
-        } else {
-          // already claimed or invalid: convert to SORRY locally
-          $("#label").textContent = "SORRY!";
-          $("#prize").textContent = "";
-          $("#code").textContent  = "";
-          setStored({ type: "LOSE" });
-        }
-      });
-    } else {
-      // loser path
-      setStored(result);
-    }
-  } else {
-    // DEBUG: never touch the Sheet, and don't lock the device unless you want to
-    // (uncomment next line if you DO want debug to set local storage)
-    // setStored(result);
+  // hook up debug re-roll (full reset)
+  if (DEBUG) {
+    $("#rerollBtn").onclick = ()=>{
+      clearStored();
+      // new draw
+      pick = deck[Math.floor(Math.random()*deck.length)] || {type:"LOSE"};
+      renderResultText(pick);
+      resetOverlay();
+    };
   }
 }
 </script>
