@@ -4,12 +4,14 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>YSU • Penguin Games</title>
-<link rel="preload" href="./docs/assets/ysu-bg.png" as="image" />
+
+<!-- paths are relative to /docs -->
+<link rel="preload" href="./assets/ysu-bg.png" as="image" />
 <style>
   :root{
     --card-w: min(92vw, 980px);
     --card-h: clamp(380px, 56vw, 640px);
-    --overlay-dot: 44px; /* “scratch brush” size */
+    --overlay-dot: 72px; /* NOT USED DIRECTLY, FOR REFERENCE ONLY */
   }
 
   html,body{
@@ -27,7 +29,7 @@
     background:
       radial-gradient(1200px 800px at 75% 20%, rgba(255,255,255,0.06), transparent 60%),
       radial-gradient(1000px 700px at 20% 80%, rgba(255,255,255,0.06), transparent 60%),
-      url("./docs/assets/ysu-bg.png");
+      url("./assets/ysu-bg.png");
     background-size: cover, cover, cover;
     background-position:center;
     filter: saturate(1.05) contrast(1.03);
@@ -57,34 +59,25 @@
     box-shadow:0 0 10px #ff3355aa;
   }
 
+  /* CARD with image behind the scratch */
   .card{
+    position:relative;
     width:var(--card-w);
     height:var(--card-h);
     border-radius:22px;
-    background: linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.02));
+    overflow:hidden;
     border:1px solid rgba(255,255,255,.08);
     box-shadow: 0 20px 50px rgba(0,0,0,.55), inset 0 1px 0 rgba(255,255,255,.04);
-    position:relative;
-    overflow:hidden;
-    display:grid;
-    place-items:center;
-  }
-
-  .hint{
-    position:absolute; inset:auto 0 18px 0;
-    text-align:center; font-size: clamp(14px, 2.2vw, 18px);
-    letter-spacing:.08em; opacity:.9; pointer-events:none;
-    text-shadow:0 2px 8px rgba(0,0,0,.5);
+    background: #0f141b url("./assets/ysu-bg.png") center/cover no-repeat; /* change if you add a dedicated card PNG */
   }
 
   .result{
-    z-index:1;
-    text-align:center;
-    user-select:none;
-    pointer-events:none;
-    padding: 0 16px;
-    opacity:0; /* hidden until scratched enough */
-    transition: opacity .25s ease-out;
+    position:absolute; inset:0;
+    z-index:2; /* UNDER the canvas */
+    display:grid; place-items:center;
+    text-align:center; padding:0 16px;
+    user-select:none; pointer-events:none;
+    opacity:0; transition:opacity .25s ease-out;
   }
   .result.revealed{ opacity:1; }
 
@@ -109,11 +102,21 @@
     opacity:.9;
   }
 
+  .hint{
+    position:absolute; left:50%; bottom:16px; transform:translateX(-50%);
+    z-index:4; /* ABOVE canvas */
+    font-size: clamp(16px, 2.2vw, 20px);
+    letter-spacing:.08em; opacity:.95;
+    text-shadow:0 2px 8px rgba(0,0,0,.6);
+    pointer-events:none;
+  }
+
+  /* SCRATCH overlay on top */
   canvas#scratch{
     position:absolute; inset:0;
     width:100%; height:100%;
-    display:block;
-    cursor: crosshair;
+    display:block; cursor:crosshair;
+    z-index:3; /* top */
   }
 
   .btnbar{
@@ -131,14 +134,14 @@
     font-weight:700;
     letter-spacing:.02em;
     color:#0b1016;
-    background:#e2b857; /* gold */
+    background:#e2b857;
     box-shadow: 0 8px 18px #e2b85733, inset 0 1px 0 #fff3;
     cursor:pointer;
   }
   .btn[hidden]{ display:none; }
 
   .notice{
-    font-size: clamp(18px, 2.2vw, 22px); /* bigger per request */
+    font-size: clamp(18px, 2.2vw, 22px); /* bigger */
     opacity:.95; margin-top:12px; text-align:center; max-width:var(--card-w);
   }
   .notice b, .notice strong { color: #ffe08a; }
@@ -161,7 +164,7 @@
     color:#e8edf6; padding:10px 14px; border-radius:12px;
     font-size: clamp(16px, 2vw, 20px);
     letter-spacing:.02em;
-    display:none; /* hidden by default on static site */
+    display:none;
   }
 </style>
 </head>
@@ -196,28 +199,22 @@
   </div>
 
 <script>
-/* ========================
-   Config
-======================== */
-const CSV_PATH = "./docs/decks/HRLVYPZ.csv"; // REAL winners (PRIZE,CODE)
-const TOTAL_CARDS = 50;                        // winners + “SORRY”
-const STORAGE_KEY = "pg_claim_v1";             // per-device stored result
-const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyxXG0lqYRWF-yNl72EXjmck-U4xU-aTR8OvPtvPw9D1XwPEJ317mELPk55QpEa0ilArQ/exec";
+/* ============= Config ============= */
+const CSV_PATH   = "./decks/HRLVYPZ.csv"; // REAL winners (PRIZE,CODE)
+const TOTAL_CARDS = 50;                   // winners + “SORRY”
+const STORAGE_KEY = "pg_claim_v1";        // per-device stored result
+const SCRIPT_URL  = "https://script.google.com/macros/s/AKfycbyxXG0lqYRWF-yNl72EXjmck-U4xU-aTR8OvPtvPw9D1XwPEJ317mELPk55QpEa0ilArQ/exec";
 
-// Debug mode: add ?debug=1 to URL. In debug we *never* call Google Sheet.
+// Debug: add ?debug=1 — shows real winners/codes but NEVER calls the Sheet
 const params = new URLSearchParams(location.search);
 const DEBUG = params.get("debug") === "1";
 
-/* ========================
-   Utilities
-======================== */
-const $ = sel => document.querySelector(sel);
+/* ============= Helpers ============= */
+const $ = s => document.querySelector(s);
 function shuffle(a){ for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; } return a; }
-
-// JSONP helper to claim in Google Sheet (no CORS) — used ONLY when !DEBUG
 function claimCodeJSONP(code, cb){
   const cbName = "jsonp_cb_" + Math.random().toString(36).slice(2);
-  window[cbName] = (res) => { try { cb(res); } finally {
+  window[cbName] = (res) => { try{ cb(res); } finally {
     delete window[cbName];
     tag.remove();
   }};
@@ -226,16 +223,13 @@ function claimCodeJSONP(code, cb){
   document.body.appendChild(tag);
 }
 
-/* ========================
-   Load winners from CSV
-======================== */
+/* ============= Data load ============= */
 async function loadWinners(){
   try{
     const res = await fetch(CSV_PATH, {cache:"no-store"});
     if(!res.ok) throw new Error("CSV fetch failed");
     const txt = await res.text();
     const lines = txt.split(/\r?\n/).map(l=>l.trim()).filter(Boolean);
-    // Expect: PRIZE, CODE
     const winners = [];
     for(const line of lines){
       const [prizeRaw, codeRaw] = line.split(",").map(s=>s?.trim());
@@ -243,142 +237,154 @@ async function loadWinners(){
       winners.push({ prize: prizeRaw, code: codeRaw });
     }
     return winners;
-  }catch(err){
-    console.warn("CSV load error:", err);
+  }catch(e){
+    console.warn("CSV load error:", e);
     return [];
   }
 }
 
-/* ========================
-   Build a local deck (static site = no global inventory)
-======================== */
 function buildLocalDeck(winners){
   const deck = [];
-  for(const w of winners){ deck.push({type:"WIN", prize:w.prize, code:w.code}); }
+  for(const w of winners) deck.push({type:"WIN", prize:w.prize, code:w.code});
   const losersNeeded = Math.max(0, TOTAL_CARDS - deck.length);
   for(let i=0;i<losersNeeded;i++) deck.push({type:"LOSE"});
   return shuffle(deck);
 }
 
-/* ========================
-   One play per device
-======================== */
-function getStored(){
-  try{ return JSON.parse(localStorage.getItem(STORAGE_KEY) || "null"); }
-  catch(e){ return null; }
-}
-function setStored(obj){ localStorage.setItem(STORAGE_KEY, JSON.stringify(obj)); }
-function clearStored(){ localStorage.removeItem(STORAGE_KEY); }
+/* ============= Storage ============= */
+const getStored = ()=>{ try{ return JSON.parse(localStorage.getItem(STORAGE_KEY)||"null"); }catch{ return null; } };
+const setStored = (o)=> localStorage.setItem(STORAGE_KEY, JSON.stringify(o));
+const clearStored = ()=> localStorage.removeItem(STORAGE_KEY);
 
-/* ========================
-   Render result
-======================== */
+/* ============= Render ============= */
 function renderResultText(obj){
-  const label = $("#label");
-  const prize = $("#prize");
-  const code  = $("#code");
-  if(obj.type === "WIN"){
-    label.textContent = "WIN!";
-    prize.textContent = obj.prize;
-    code.textContent  = obj.code;
-  }else{
-    label.textContent = "SORRY!";
-    prize.textContent = "";
-    code.textContent  = "";
-  }
+  $("#label").textContent = (obj.type === "WIN") ? "WIN!" : "SORRY!";
+  $("#prize").textContent = (obj.type === "WIN") ? obj.prize : "";
+  $("#code").textContent  = (obj.type === "WIN") ? obj.code  : "";
 }
 
-/* ========================
-   Scratch overlay
-======================== */
+/* ============= Scratch overlay ============= */
+const BRUSH_PX = 72;          // bigger brush = easier scratch (try 64–80)
+const REVEAL_THRESHOLD = 0.32; // ~32% cleared triggers reveal
+
 function drawGold(ctx, w, h){
-  const grad1 = ctx.createLinearGradient(0,0,w,h);
-  grad1.addColorStop(0,  "#f3cf6b");
-  grad1.addColorStop(.45,"#b38728");
-  grad1.addColorStop(.55,"#ffe08a");
-  grad1.addColorStop(1,  "#9d7a2d");
-  ctx.fillStyle = grad1; ctx.fillRect(0,0,w,h);
-  const noise = ctx.createLinearGradient(0,h,0,0);
-  noise.addColorStop(0,"rgba(255,255,255,.08)");
-  noise.addColorStop(1,"rgba(0,0,0,.08)");
+  const g1 = ctx.createLinearGradient(0,0,w,h);
+  g1.addColorStop(0,  "#f3cf6b");
+  g1.addColorStop(.45,"#b38728");
+  g1.addColorStop(.55,"#ffe08a");
+  g1.addColorStop(1,  "#9d7a2d");
+  ctx.fillStyle = g1; ctx.fillRect(0,0,w,h);
+  const n = ctx.createLinearGradient(0,h,0,0);
+  n.addColorStop(0,"rgba(255,255,255,.08)");
+  n.addColorStop(1,"rgba(0,0,0,.08)");
   ctx.globalCompositeOperation="overlay";
-  ctx.fillStyle=noise; ctx.fillRect(0,0,w,h);
+  ctx.fillStyle=n; ctx.fillRect(0,0,w,h);
   ctx.globalCompositeOperation="source-over";
 }
 
 function initScratch(onReveal){
-  const c = $("#scratch");
-  const card = $("#card");
-  const rect = card.getBoundingClientRect();
-  c.width  = rect.width;
-  c.height = rect.height;
-  const ctx = c.getContext("2d");
-  drawGold(ctx, c.width, c.height);
+  const canvas = $("#scratch");
+  const card   = $("#card");
+  const hint   = $("#hint");
+  const result = $("#result");
 
-  let scratching = false, revealed = false;
-  function scratch(x,y){
-    ctx.globalCompositeOperation='destination-out';
-    ctx.beginPath();
-    ctx.arc(x, y, parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--overlay-dot'))/2, 0, Math.PI*2);
-    ctx.fill();
-    ctx.globalCompositeOperation='source-over';
+  const dpr = Math.max(1, window.devicePixelRatio || 1);
+  function sizeCanvas(){
+    const r = card.getBoundingClientRect();
+    canvas.style.width  = r.width + 'px';
+    canvas.style.height = r.height + 'px';
+    canvas.width  = Math.floor(r.width  * dpr);
+    canvas.height = Math.floor(r.height * dpr);
+  }
+  sizeCanvas();
+  const ctx = canvas.getContext('2d');
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  drawGold(ctx, canvas.width/dpr, canvas.height/dpr);
+
+  let down = false, last = null, revealed = false;
+
+  function scratchAt(x, y){
+    ctx.save();
+    ctx.globalCompositeOperation = 'destination-out';
+    ctx.lineJoin = ctx.lineCap = 'round';
+    ctx.lineWidth = BRUSH_PX;
+    if(last){
+      ctx.beginPath();
+      ctx.moveTo(last.x, last.y);
+      ctx.lineTo(x, y);
+      ctx.stroke();
+    } else {
+      ctx.beginPath();
+      ctx.arc(x, y, BRUSH_PX/2, 0, Math.PI*2);
+      ctx.fill();
+    }
+    ctx.restore();
+    last = {x,y};
   }
 
-  c.addEventListener('pointerdown', e=>{ scratching=true; scratch(e.offsetX, e.offsetY); });
-  c.addEventListener('pointermove', e=>{ if(scratching) scratch(e.offsetX, e.offsetY); });
-  window.addEventListener('pointerup', ()=> scratching=false);
+  const pos = (e)=>{
+    const rect = canvas.getBoundingClientRect();
+    const pt = e.touches ? e.touches[0] : e;
+    return { x: pt.clientX - rect.left, y: pt.clientY - rect.top };
+  };
 
-  let clearedCheck;
-  c.addEventListener('pointerup', ()=>{
-    clearTimeout(clearedCheck);
-    clearedCheck = setTimeout(()=>{
-      const pixels = ctx.getImageData(0,0,c.width,c.height).data;
-      let transparent = 0;
-      for(let i=3;i<pixels.length;i+=4){ if(pixels[i]===0) transparent++; }
-      const percent = transparent / (c.width*c.height) * 100;
-      if(!revealed && percent > 60){
-        revealed = true;
-        $("#result").classList.add("revealed");
-        $("#hint").style.display = "none";
-        // disable further scratching
-        c.style.pointerEvents = "none";
-        c.style.opacity = 0;
-        c.style.transition = "opacity .35s ease-out";
-        if(typeof onReveal === "function") onReveal();
-      }
-    }, 80);
-  }, {passive:true});
+  function downH(e){ down = true; last = null; const p = pos(e); scratchAt(p.x,p.y); }
+  function moveH(e){ if(!down) return; const p = pos(e); scratchAt(p.x,p.y); }
+  function upH(){
+    down = false; last = null;
 
-  // return a resetter for re-roll
+    // sample for speed: every 8th pixel (4 * 8)
+    const {width, height} = canvas;
+    const data = ctx.getImageData(0,0,width,height).data;
+    let clear=0, total=0;
+    for(let i=3;i<data.length;i+=32){ total++; if(data[i]===0) clear++; }
+    const cleared = clear/total;
+
+    if(!revealed && cleared >= REVEAL_THRESHOLD){
+      revealed = true;
+      result.classList.add("revealed");
+      hint.style.display = "none";
+      canvas.style.pointerEvents = "none";
+      canvas.style.transition = "opacity .35s ease-out";
+      canvas.style.opacity = "0";
+      if(typeof onReveal === "function") onReveal();
+    }
+  }
+
+  // pointer + touch
+  canvas.addEventListener('pointerdown', downH);
+  window.addEventListener('pointermove', moveH);
+  window.addEventListener('pointerup',   upH);
+  canvas.addEventListener('touchstart',  e=>{ e.preventDefault(); downH(e); }, {passive:false});
+  canvas.addEventListener('touchmove',   e=>{ e.preventDefault(); moveH(e); }, {passive:false});
+  canvas.addEventListener('touchend',    e=>{ e.preventDefault(); upH(e);   }, {passive:false});
+
+  // expose reset for re-roll
   return function resetOverlay(){
-    ctx.globalCompositeOperation = "source-over";
-    ctx.clearRect(0,0,c.width,c.height);
-    drawGold(ctx, c.width, c.height);
-    c.style.pointerEvents = "auto";
-    c.style.opacity = 1;
-    revealed = false;
-    $("#result").classList.remove("revealed");
-    $("#hint").style.display = "block";
+    canvas.style.opacity = "1";
+    canvas.style.pointerEvents = "auto";
+    result.classList.remove("revealed");
+    hint.style.display = "block";
+    sizeCanvas();
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    drawGold(ctx, canvas.width/dpr, canvas.height/dpr);
+    down=false; last=null; revealed=false;
   };
 }
 
-/* ========================
-   Main
-======================== */
+/* ============= Flow ============= */
 (async function main(){
   $("#globalBanner").style.display = "none";
 
-  // Debug controls
   if(DEBUG){
     $("#resetBtn").hidden = false;
     $("#rerollBtn").hidden = false;
     $("#resetBtn").onclick = ()=>{ clearStored(); location.reload(); };
   }
 
-  // In LIVE mode, respect one-play-per-device
-  const existing = getStored();
-  if(existing && !DEBUG){
-    renderResultText(existing);
+  const stored = getStored();
+  if(stored && !DEBUG){
+    renderResultText(stored);
     $("#result").classList.add("revealed");
     $("#already").hidden = false;
     $("#scratch").style.pointerEvents="none";
@@ -392,26 +398,21 @@ function initScratch(onReveal){
 
 async function rollAndRender(isDebug){
   const winners = await loadWinners();
-  const deck    = buildLocalDeck(winners);
+  const deck = buildLocalDeck(winners);
 
-  // pick a random card
   let pick = deck[Math.floor(Math.random()*deck.length)] || {type:"LOSE"};
-
-  // pre-render text but keep hidden until scratch reveal
   renderResultText(pick);
 
-  // init scratch overlay; when reveal happens, run claim logic (live only)
   const resetOverlay = initScratch(()=>{
     if(!isDebug){
       if(pick.type === "WIN"){
-        if (window.__claiming) return;
+        if(window.__claiming) return;
         window.__claiming = true;
         claimCodeJSONP(pick.code, (res)=>{
           window.__claiming = false;
           if(res && res.ok){
             setStored(pick);
           }else{
-            // convert to SORRY locally if already taken
             renderResultText({type:"LOSE"});
             setStored({type:"LOSE"});
           }
@@ -422,11 +423,9 @@ async function rollAndRender(isDebug){
     }
   });
 
-  // hook up debug re-roll (full reset)
-  if (DEBUG) {
+  if(DEBUG){
     $("#rerollBtn").onclick = ()=>{
       clearStored();
-      // new draw
       pick = deck[Math.floor(Math.random()*deck.length)] || {type:"LOSE"};
       renderResultText(pick);
       resetOverlay();
