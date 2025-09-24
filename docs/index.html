@@ -8,7 +8,7 @@
 <style>
   :root{
     --card-w: min(92vw, 980px);
-    --card-h: clamp(360px, 56vw, 600px);
+    --card-h: clamp(380px, 56vw, 640px);
     --overlay-dot: 44px; /* “scratch brush” size */
   }
 
@@ -40,33 +40,30 @@
     flex-direction:column;
     align-items:center;
     gap:18px;
-    padding:20px 14px 48px;
+    padding:22px 14px 52px;
   }
 
   .brand{
     margin-top:8px;
-    font-weight:700;
-    letter-spacing:.06em;
+    font-weight:800;
+    letter-spacing:.08em;
     text-transform:uppercase;
-    font-size:14px;
-    display:flex;gap:8px;align-items:center;
-    opacity:.9;
+    font-size: clamp(18px, 2.4vw, 28px); /* BIGGER */
+    display:flex; gap:10px; align-items:center;
+    opacity:.95;
   }
   .brand .dot{
-    width:8px;height:8px;border-radius:50%; background:#ff3355;
-    box-shadow:0 0 8px #ff3355aa;
+    width:10px;height:10px;border-radius:50%; background:#ff3355;
+    box-shadow:0 0 10px #ff3355aa;
   }
 
   .card{
     width:var(--card-w);
     height:var(--card-h);
-    border-radius:18px;
-    background:
-      linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.02));
+    border-radius:22px;
+    background: linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.02));
     border:1px solid rgba(255,255,255,.08);
-    box-shadow:
-      0 20px 50px rgba(0,0,0,.55),
-      inset 0 1px 0 rgba(255,255,255,.04);
+    box-shadow: 0 20px 50px rgba(0,0,0,.55), inset 0 1px 0 rgba(255,255,255,.04);
     position:relative;
     overflow:hidden;
     display:grid;
@@ -78,26 +75,27 @@
     text-align:center;
     user-select:none;
     pointer-events:none;
+    padding: 0 16px;
   }
   .result .label{
-    font-size: clamp(20px, 3.6vw, 40px);
-    letter-spacing:.2em;
+    font-size: clamp(22px, 3.8vw, 44px);
+    letter-spacing:.22em;
     font-weight:900;
     text-transform:uppercase;
     text-shadow:0 3px 12px rgba(0,0,0,.5);
   }
   .result .prize{
-    margin-top:.6rem;
-    font-size: clamp(14px, 2.6vw, 24px);
+    margin-top:.7rem;
+    font-size: clamp(16px, 2.8vw, 26px);
     letter-spacing:.06em;
-    opacity:.92;
+    opacity:.94;
   }
   .result .code{
-    margin-top:.35rem;
+    margin-top:.45rem;
     font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
-    font-size: clamp(12px, 2.2vw, 18px);
+    font-size: clamp(14px, 2.4vw, 20px);
     letter-spacing:.04em;
-    opacity:.85;
+    opacity:.9;
   }
 
   /* Gold scratch overlay (no seams) */
@@ -114,13 +112,13 @@
     align-items:center;
     justify-content:center;
     flex-wrap:wrap;
-    margin-top:8px;
+    margin-top:10px;
   }
   .btn{
     appearance:none;
-    border:none; border-radius:10px;
-    padding:10px 14px;
-    font-weight:650;
+    border:none; border-radius:12px;
+    padding:12px 16px;
+    font-weight:700;
     letter-spacing:.02em;
     color:#0b1016;
     background:#e2b857; /* gold */
@@ -130,26 +128,35 @@
   .btn[hidden]{ display:none; }
 
   .notice{
-    font-size:13px; opacity:.8; margin-top:6px;
+    font-size: clamp(15px, 1.8vw, 18px); /* BIGGER */
+    opacity:.9; margin-top:10px;
   }
-  .ribbon{
-    position:fixed; top:10px; left:50%;
-    transform:translateX(-50%);
-    background:#151b22; border:1px solid #ffffff14;
-    color:#e8edf6; padding:8px 12px; border-radius:10px;
-    font-size:13px; letter-spacing:.02em;
-    display:none; /* hidden by default on static site */
-  }
+  .notice b, .notice strong { color: #ffe08a; }
+
   .already{
     background:#1d242d;
     border:1px solid #ffffff18;
-    padding:10px 12px; border-radius:10px;
-    margin-top:6px; font-size:14px; opacity:.92;
+    padding:12px 14px; border-radius:12px;
+    margin-top:10px;
+    font-size: clamp(15px, 1.8vw, 18px); /* BIGGER */
+    opacity:.96;
+    text-align:center;
+    max-width: var(--card-w);
+  }
+
+  .ribbon{
+    position:fixed; top:12px; left:50%;
+    transform:translateX(-50%);
+    background:#151b22; border:1px solid #ffffff14;
+    color:#e8edf6; padding:10px 14px; border-radius:12px;
+    font-size: clamp(14px, 1.8vw, 18px);
+    letter-spacing:.02em;
+    display:none; /* hidden by default on static site */
   }
 </style>
 </head>
 <body>
-  <!-- kept hidden on a static site because we can’t know global claims -->
+  <!-- hidden on static site because we can’t know global claims -->
   <div id="globalBanner" class="ribbon"></div>
 
   <div class="wrap">
@@ -185,6 +192,7 @@
 const CSV_PATH = "./docs/decks/HRLVYPZ.csv"; // your uploaded file
 const TOTAL_CARDS = 50;                      // 20 winners + 30 “SORRY”
 const STORAGE_KEY = "pg_claim_v1";           // per-device stored result
+const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyxXG0lqYRWF-yNl72EXjmck-U4xU-aTR8OvPtvPw9D1XwPEJ317mELPk55QpEa0ilArQ/exec";
 
 // Debug mode (add ?debug=1)
 const params = new URLSearchParams(location.search);
@@ -195,6 +203,18 @@ const DEBUG = params.get("debug") === "1";
 ======================== */
 const $ = sel => document.querySelector(sel);
 function shuffle(a){ for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; } return a; }
+
+// JSONP helper to claim in Google Sheet (no CORS)
+function claimCodeJSONP(code, cb){
+  const cbName = "jsonp_cb_" + Math.random().toString(36).slice(2);
+  window[cbName] = (res) => { try { cb(res); } finally {
+    delete window[cbName];
+    tag.remove();
+  }};
+  const tag = document.createElement("script");
+  tag.src = `${SCRIPT_URL}?code=${encodeURIComponent(code)}&callback=${encodeURIComponent(cbName)}`;
+  document.body.appendChild(tag);
+}
 
 /* ========================
    Load winners from CSV
@@ -210,26 +230,21 @@ async function loadWinners(){
     for(const line of lines){
       const [prizeRaw, codeRaw] = line.split(",").map(s=>s?.trim());
       if(!prizeRaw || !codeRaw) continue;
-      // keep the exact prize text for display; code as-is
       winners.push({ prize: prizeRaw, code: codeRaw });
     }
     return winners;
   }catch(err){
     console.warn("CSV load error:", err);
-    return []; // fall back gracefully
+    return [];
   }
 }
 
 /* ========================
-   Build a local deck
-   (static site = no global inventory)
+   Build a local deck (static site = no global inventory)
 ======================== */
 function buildLocalDeck(winners){
-  // winners array length = 20 from your CSV
   const deck = [];
-  // push winners
   for(const w of winners){ deck.push({type:"WIN", prize:w.prize, code:w.code}); }
-  // push losers to fill to 50 total
   const losersNeeded = Math.max(0, TOTAL_CARDS - deck.length);
   for(let i=0;i<losersNeeded;i++) deck.push({type:"LOSE"});
   return shuffle(deck);
@@ -242,12 +257,8 @@ function getStored(){
   try{ return JSON.parse(localStorage.getItem(STORAGE_KEY) || "null"); }
   catch(e){ return null; }
 }
-function setStored(obj){
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(obj));
-}
-function clearStored(){
-  localStorage.removeItem(STORAGE_KEY);
-}
+function setStored(obj){ localStorage.setItem(STORAGE_KEY, JSON.stringify(obj)); }
+function clearStored(){ localStorage.removeItem(STORAGE_KEY); }
 
 /* ========================
    Render result
@@ -271,23 +282,17 @@ function showResult(obj){
    Scratch overlay
 ======================== */
 function drawGold(ctx, w, h){
-  // seamless gold texture via layered gradients
   const grad1 = ctx.createLinearGradient(0,0,w,h);
   grad1.addColorStop(0,  "#f3cf6b");
   grad1.addColorStop(.45,"#b38728");
   grad1.addColorStop(.55,"#ffe08a");
   grad1.addColorStop(1,  "#9d7a2d");
-
-  ctx.fillStyle = grad1;
-  ctx.fillRect(0,0,w,h);
-
-  // noise overlay
+  ctx.fillStyle = grad1; ctx.fillRect(0,0,w,h);
   const noise = ctx.createLinearGradient(0,h,0,0);
   noise.addColorStop(0,"rgba(255,255,255,.08)");
   noise.addColorStop(1,"rgba(0,0,0,.08)");
   ctx.globalCompositeOperation="overlay";
-  ctx.fillStyle=noise;
-  ctx.fillRect(0,0,w,h);
+  ctx.fillStyle=noise; ctx.fillRect(0,0,w,h);
   ctx.globalCompositeOperation="source-over";
 }
 
@@ -297,7 +302,6 @@ function initScratch(){
   const rect = card.getBoundingClientRect();
   c.width  = rect.width;
   c.height = rect.height;
-
   const ctx = c.getContext("2d");
   drawGold(ctx, c.width, c.height);
 
@@ -314,16 +318,13 @@ function initScratch(){
   c.addEventListener('pointermove', e=>{ if(scratching) scratch(e.offsetX, e.offsetY); });
   window.addEventListener('pointerup', ()=> scratching=false);
 
-  // Make overlay ignore events after ~60% cleared
   let clearedCheck;
   c.addEventListener('pointerup', ()=>{
     clearTimeout(clearedCheck);
     clearedCheck = setTimeout(()=>{
       const pixels = ctx.getImageData(0,0,c.width,c.height).data;
       let transparent = 0;
-      for(let i=3;i<pixels.length;i+=4){
-        if(pixels[i]===0) transparent++;
-      }
+      for(let i=3;i<pixels.length;i+=4){ if(pixels[i]===0) transparent++; }
       const percent = transparent / (c.width*c.height) * 100;
       if(percent > 60){
         c.style.pointerEvents = "none";
@@ -338,7 +339,6 @@ function initScratch(){
    Main
 ======================== */
 (async function main(){
-  // Hide global claimed banner on static site
   $("#globalBanner").style.display = "none";
 
   // Debug controls
@@ -354,13 +354,11 @@ function initScratch(){
   if(existing){
     showResult(existing);
     $("#already").hidden = false;
-    // disable scratching
     $("#scratch").style.pointerEvents="none";
     $("#scratch").style.opacity=0;
     return;
   }
 
-  // Not played: roll & render
   await rollAndRender(false);
 })();
 
@@ -371,22 +369,43 @@ async function rollAndRender(isDebug){
   // Draw scratch overlay
   initScratch();
 
-  // Random pick (mix of winners/losers)
+  // Random pick
   const pick = deck[Math.floor(Math.random()*deck.length)] || {type:"LOSE"};
 
   // If winner: ensure we have a code/prize (fallback safe)
   let result = pick;
-  if(pick.type==="WIN"){
-    // if somehow missing prize/code, fallback to LOSER to avoid empty UI
-    if(!pick.prize || !pick.code) result = {type:"LOSE"};
+  if (pick.type === "WIN") {
+    if (!pick.prize || !pick.code) {
+      result = { type: "LOSE" };
+    }
   }
 
   // Render immediately (under the gold)
   showResult(result);
 
-  // On a real play (not debug), store and lock this device
-  if(!isDebug){
-    setStored(result);
+  // Lock per-device & (if WIN) lock globally in the Sheet
+  if (!isDebug) {
+    if (result.type === "WIN") {
+      if (window.__claiming) return;
+      window.__claiming = true;
+
+      claimCodeJSONP(result.code, (res) => {
+        window.__claiming = false;
+
+        if (res && res.ok) {
+          setStored(result); // success: keep win on this device
+        } else {
+          // already claimed or invalid: convert to SORRY locally
+          $("#label").textContent = "SORRY!";
+          $("#prize").textContent = "";
+          $("#code").textContent  = "";
+          setStored({ type: "LOSE" });
+        }
+      });
+    } else {
+      // Loser path
+      setStored(result);
+    }
   }
 }
 </script>
