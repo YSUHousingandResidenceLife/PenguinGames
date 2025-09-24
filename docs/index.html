@@ -375,7 +375,6 @@ function initScratch(onReveal){
     down=false; last=null; revealed=false;
   };
 }
-
 // Helper to show SOLD OUT state
 function showSoldOutUI() {
   const label  = document.querySelector("#label");
@@ -391,25 +390,25 @@ function showSoldOutUI() {
   if (prize) prize.textContent = "";
   if (code)  code.textContent  = "";
 
-  // Reveal the card content
+  // Reveal the card content (so it’s visible under the overlay)
   if (result) {
     result.classList.add("revealed");
-    result.classList.add("soldout");   // optional extra styling
+    result.classList.add("soldout");   // optional styling hook
   }
 
-  // Hide scratch overlay + hint
+  // Hide scratch hint + disable overlay
   if (hint)   hint.style.display = "none";
   if (canvas) {
     canvas.style.pointerEvents = "none";
     canvas.style.opacity = 0;
   }
 
-  // Hide the banner (don’t show text at the top)
+  // Hide the ribbon (we want the message only on the card)
   if (banner) banner.style.display = "none";
 
+  // Don’t lock this device with a fake result
   try { localStorage.removeItem("pg_claim_v1"); } catch {}
 }
-
   
 /* ============= Flow ============= */
 (async function main(){
