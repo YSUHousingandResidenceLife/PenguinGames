@@ -174,15 +174,19 @@
   <div class="wrap">
     <div class="brand"><span class="dot"></span>YSU • PENGUIN GAMES</div>
 
-    <div class="card" id="card">
-      <div class="result" id="result">
-        <div class="label" id="label">SCRATCH TO REVEAL</div>
-        <div class="prize" id="prize"></div>
-        <div class="code"  id="code"></div>
-      </div>
-      <div class="hint" id="hint">Scratch the gold to reveal your result</div>
-      <canvas id="scratch"></canvas>
-    </div>
+<div class="card" id="card">
+  <!-- new: actual image element -->
+  <img class="card-bg" src="./assets/ysu-bg.png" alt="Card background" />
+
+  <div class="result" id="result">
+    <div class="label" id="label">SCRATCH TO REVEAL</div>
+    <div class="prize" id="prize"></div>
+    <div class="code"  id="code"></div>
+  </div>
+
+  <div class="hint" id="hint">Scratch the gold to reveal your result</div>
+  <canvas id="scratch"></canvas>
+</div>
 
     <div class="already" id="already" hidden>
       You already played on this device. Thanks for trying!
