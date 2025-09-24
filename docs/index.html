@@ -50,7 +50,7 @@
     font-weight:800;
     letter-spacing:.08em;
     text-transform:uppercase;
-    font-size: clamp(20px, 2.6vw, 30px); /* bigger */
+    font-size: clamp(20px, 2.6vw, 30px);
     display:flex; gap:10px; align-items:center;
     opacity:.95;
   }
@@ -68,7 +68,7 @@
     overflow:hidden;
     border:1px solid rgba(255,255,255,.08);
     box-shadow: 0 20px 50px rgba(0,0,0,.55), inset 0 1px 0 rgba(255,255,255,.04);
-   background: #0f141b url("./assets/ysu-bg.png?v=1") center/cover no-repeat;
+    background:#0f141b url("./assets/ysu-bg.png?v=1") center/cover no-repeat;
   }
 
   .result{
@@ -141,7 +141,7 @@
   .btn[hidden]{ display:none; }
 
   .notice{
-    font-size: clamp(18px, 2.2vw, 22px); /* bigger */
+    font-size: clamp(18px, 2.2vw, 22px);
     opacity:.95; margin-top:12px; text-align:center; max-width:var(--card-w);
   }
   .notice b, .notice strong { color: #ffe08a; }
@@ -151,7 +151,7 @@
     border:1px solid #ffffff18;
     padding:14px 16px; border-radius:12px;
     margin-top:12px;
-    font-size: clamp(18px, 2.2vw, 22px); /* bigger */
+    font-size: clamp(18px, 2.2vw, 22px);
     opacity:.96;
     text-align:center;
     max-width: var(--card-w);
@@ -174,19 +174,16 @@
   <div class="wrap">
     <div class="brand"><span class="dot"></span>YSU • PENGUIN GAMES</div>
 
-<div class="card" id="card">
-  <!-- new: actual image element -->
-  <img class="card-bg" src="./assets/ysu-bg.png" alt="Card background" />
-
-  <div class="result" id="result">
-    <div class="label" id="label">SCRATCH TO REVEAL</div>
-    <div class="prize" id="prize"></div>
-    <div class="code"  id="code"></div>
-  </div>
-
-  <div class="hint" id="hint">Scratch the gold to reveal your result</div>
-  <canvas id="scratch"></canvas>
-</div>
+    <div class="card" id="card">
+      <img class="card-bg" src="./assets/ysu-bg.png" alt="Card background" />
+      <div class="result" id="result">
+        <div class="label" id="label">SCRATCH TO REVEAL</div>
+        <div class="prize" id="prize"></div>
+        <div class="code"  id="code"></div>
+      </div>
+      <div class="hint" id="hint">Scratch the gold to reveal your result</div>
+      <canvas id="scratch"></canvas>
+    </div>
 
     <div class="already" id="already" hidden>
       You already played on this device. Thanks for trying!
@@ -204,9 +201,9 @@
 
 <script>
 /* ============= Config ============= */
-const CSV_PATH   = "./decks/HRLVYPZ.csv"; // REAL winners (PRIZE,CODE)
-const TOTAL_CARDS = 50;                   // winners + “SORRY”
-const STORAGE_KEY = "pg_claim_v1";        // per-device stored result
+const CSV_PATH    = "./decks/HRLVYPZ.csv"; // REAL winners (PRIZE,CODE)
+const TOTAL_CARDS = 50;                    // winners + “SORRY”
+const STORAGE_KEY = "pg_claim_v1";         // per-device stored result
 const SCRIPT_URL  = "https://script.google.com/macros/s/AKfycbyxXG0lqYRWF-yNl72EXjmck-U4xU-aTR8OvPtvPw9D1XwPEJ317mELPk55QpEa0ilArQ/exec";
 
 // Debug: add ?debug=1 — shows real winners/codes but NEVER calls the Sheet
@@ -218,10 +215,7 @@ const $ = s => document.querySelector(s);
 function shuffle(a){ for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; } return a; }
 function claimCodeJSONP(code, cb){
   const cbName = "jsonp_cb_" + Math.random().toString(36).slice(2);
-  window[cbName] = (res) => { try{ cb(res); } finally {
-    delete window[cbName];
-    tag.remove();
-  }};
+  window[cbName] = (res) => { try{ cb(res); } finally { delete window[cbName]; tag.remove(); } };
   const tag = document.createElement("script");
   tag.src = `${SCRIPT_URL}?code=${encodeURIComponent(code)}&callback=${encodeURIComponent(cbName)}`;
   document.body.appendChild(tag);
@@ -256,8 +250,8 @@ function buildLocalDeck(winners){
 }
 
 /* ============= Storage ============= */
-const getStored = ()=>{ try{ return JSON.parse(localStorage.getItem(STORAGE_KEY)||"null"); }catch{ return null; } };
-const setStored = (o)=> localStorage.setItem(STORAGE_KEY, JSON.stringify(o));
+const getStored   = ()=>{ try{ return JSON.parse(localStorage.getItem(STORAGE_KEY)||"null"); }catch{ return null; } };
+const setStored   = (o)=> localStorage.setItem(STORAGE_KEY, JSON.stringify(o));
 const clearStored = ()=> localStorage.removeItem(STORAGE_KEY);
 
 /* ============= Render ============= */
@@ -268,8 +262,8 @@ function renderResultText(obj){
 }
 
 /* ============= Scratch overlay ============= */
-const BRUSH_PX = 72;          // bigger brush = easier scratch (try 64–80)
-const REVEAL_THRESHOLD = 0.32; // ~32% cleared triggers reveal
+const BRUSH_PX = 72;            // bigger brush = easier scratch
+const REVEAL_THRESHOLD = 0.32;  // ~32% cleared triggers reveal
 
 function drawGold(ctx, w, h){
   const g1 = ctx.createLinearGradient(0,0,w,h);
@@ -281,8 +275,7 @@ function drawGold(ctx, w, h){
   const n = ctx.createLinearGradient(0,h,0,0);
   n.addColorStop(0,"rgba(255,255,255,.08)");
   n.addColorStop(1,"rgba(0,0,0,.08)");
-  ctx.globalCompositeOperation="overlay";
-  ctx.fillStyle=n; ctx.fillRect(0,0,w,h);
+  ctx.globalCompositeOperation="overlay"; ctx.fillStyle=n; ctx.fillRect(0,0,w,h);
   ctx.globalCompositeOperation="source-over";
 }
 
@@ -313,14 +306,9 @@ function initScratch(onReveal){
     ctx.lineJoin = ctx.lineCap = 'round';
     ctx.lineWidth = BRUSH_PX;
     if(last){
-      ctx.beginPath();
-      ctx.moveTo(last.x, last.y);
-      ctx.lineTo(x, y);
-      ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(last.x, last.y); ctx.lineTo(x, y); ctx.stroke();
     } else {
-      ctx.beginPath();
-      ctx.arc(x, y, BRUSH_PX/2, 0, Math.PI*2);
-      ctx.fill();
+      ctx.beginPath(); ctx.arc(x, y, BRUSH_PX/2, 0, Math.PI*2); ctx.fill();
     }
     ctx.restore();
     last = {x,y};
@@ -355,7 +343,6 @@ function initScratch(onReveal){
     }
   }
 
-  // pointer + touch
   canvas.addEventListener('pointerdown', downH);
   window.addEventListener('pointermove', moveH);
   window.addEventListener('pointerup',   upH);
@@ -363,7 +350,6 @@ function initScratch(onReveal){
   canvas.addEventListener('touchmove',   e=>{ e.preventDefault(); moveH(e); }, {passive:false});
   canvas.addEventListener('touchend',    e=>{ e.preventDefault(); upH(e);   }, {passive:false});
 
-  // expose reset for re-roll
   return function resetOverlay(){
     canvas.style.opacity = "1";
     canvas.style.pointerEvents = "auto";
@@ -372,10 +358,10 @@ function initScratch(onReveal){
     sizeCanvas();
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     drawGold(ctx, canvas.width/dpr, canvas.height/dpr);
-    down=false; last=null; revealed=false;
   };
 }
-// Helper to show SOLD OUT state
+
+/* ===== SOLD OUT UI (shows on the card, not a banner) ===== */
 function showSoldOutUI() {
   const label  = document.querySelector("#label");
   const prize  = document.querySelector("#prize");
@@ -385,31 +371,23 @@ function showSoldOutUI() {
   const banner = document.querySelector("#globalBanner");
   const result = document.querySelector("#result");
 
-  // Put SOLD OUT on the card
   if (label) label.textContent = "SOLD OUT";
   if (prize) prize.textContent = "";
   if (code)  code.textContent  = "";
 
-  // Reveal the card content (so it’s visible under the overlay)
   if (result) {
-    result.classList.add("revealed");
-    result.classList.add("soldout");   // optional styling hook
+    result.classList.add("revealed");   // ensure text shows
+    result.classList.add("soldout");    // optional styling hook
   }
 
-  // Hide scratch hint + disable overlay
   if (hint)   hint.style.display = "none";
-  if (canvas) {
-    canvas.style.pointerEvents = "none";
-    canvas.style.opacity = 0;
-  }
+  if (canvas) { canvas.style.pointerEvents = "none"; canvas.style.opacity = 0; }
 
-  // Hide the ribbon (we want the message only on the card)
   if (banner) banner.style.display = "none";
 
-  // Don’t lock this device with a fake result
   try { localStorage.removeItem("pg_claim_v1"); } catch {}
 }
-  
+
 /* ============= Flow ============= */
 (async function main(){
   $("#globalBanner").style.display = "none";
@@ -436,7 +414,7 @@ function showSoldOutUI() {
 
 async function rollAndRender(isDebug){
   const winners = await loadWinners();
-  const deck = buildLocalDeck(winners);
+  const deck    = buildLocalDeck(winners);
 
   let pick = deck[Math.floor(Math.random()*deck.length)] || {type:"LOSE"};
   renderResultText(pick);
@@ -446,23 +424,21 @@ async function rollAndRender(isDebug){
       if(pick.type === "WIN"){
         if(window.__claiming) return;
         window.__claiming = true;
-claimCodeJSONP(pick.code, (res) => {
-  window.__claiming = false;
+        claimCodeJSONP(pick.code, (res)=>{
+          window.__claiming = false;
 
-  // 🔴 NEW: check if all codes are gone
-  if (res && res.soldOut) {
-    showSoldOutUI();
-    return;
-  }
+          // SOLD OUT check — show UI on the card and stop
+          if(res && res.soldOut){
+            showSoldOutUI();
+            return;
+          }
 
-  if (res && res.ok) {
-    setStored(pick);
-  } else {
-    renderResultText({ type: "LOSE" });
-    setStored({ type: "LOSE" });
-  }
-});
-
+          if(res && res.ok){
+            setStored(pick);
+          }else{
+            renderResultText({type:"LOSE"});
+            setStored({type:"LOSE"});
+          }
         });
       }else{
         setStored(pick);
