@@ -1,279 +1,394 @@
 <!doctype html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Penguin Scratch</title>
-  <style>
-    :root{
-      /* Larger, fuller card */
-      --card-w: min(96vw, 640px);
-      --card-h: min(76vh, calc(var(--card-w) * 0.68));
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>YSU • Penguin Games</title>
+<link rel="preload" href="./docs/assets/ysu-bg.png" as="image" />
+<style>
+  :root{
+    --card-w: min(92vw, 980px);
+    --card-h: clamp(360px, 56vw, 600px);
+    --overlay-dot: 44px; /* “scratch brush” size */
+  }
 
-      --ysu-red:#a00010;
-    }
-    html,body{
-      margin:0;
-      padding:0;
-      background:#0b0f17;
-      color:#fff;
-      font-family: system-ui, -apple-system, Segoe UI, Roboto, Inter, Arial, sans-serif;
-    }
-    .wrap{
-      min-height:100dvh;
-      display:grid;
-      place-items:center;
-      padding:24px 16px;
-      background:
-        radial-gradient(50% 50% at 100% 0%, rgba(160,0,16,0.12) 0%, transparent 60%),
-        radial-gradient(50% 50% at 0% 100%, rgba(202,162,74,0.12) 0%, transparent 60%),
-        #0b0f17 url("docs/assets/ysu_bg.png") center/cover no-repeat;
-    }
-    .soldout{
-      position:fixed;
-      top:10px; left:50%;
-      transform:translateX(-50%);
-      background:#fff2;
-      border:1px solid #fff3;
-      padding:10px 14px;
-      border-radius:12px;
-      font-size:14px;
-      backdrop-filter: blur(6px);
-      z-index:3;
-    }
-    .card{
-      width:var(--card-w);
-      height:var(--card-h);
-      border-radius:22px;
-      background:#151a26;
-      box-shadow: 0 18px 40px rgba(0,0,0,.5), inset 0 0 0 2px rgba(255,255,255,.06);
-      position:relative;
-      overflow:hidden;
-    }
-    .brand{
-      position:absolute;
-      inset:16px 16px auto 16px;
-      display:flex; align-items:center; gap:10px;
-      user-select:none; pointer-events:none;
-      text-shadow:0 2px 10px rgba(0,0,0,.5);
-    }
-    .brand .dot{ width:10px; height:10px; border-radius:50%; background:var(--ysu-red); box-shadow:0 0 16px rgba(160,0,16,.6); }
-    .brand h1{ margin:0; font-size:17px; letter-spacing:.08em; text-transform:uppercase; }
+  html,body{
+    height:100%;
+    margin:0;
+    background:#0e1217;
+    color:#e9eef7;
+    font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji","Segoe UI Emoji";
+  }
 
-    .penguin{ position:absolute; right:-4%; bottom:-2%; width:36%; opacity:.9; filter: drop-shadow(0 10px 25px rgba(0,0,0,.5)); }
+  /* Background */
+  body::before{
+    content:"";
+    position:fixed; inset:0;
+    background:
+      radial-gradient(1200px 800px at 75% 20%, rgba(255,255,255,0.06), transparent 60%),
+      radial-gradient(1000px 700px at 20% 80%, rgba(255,255,255,0.06), transparent 60%),
+      url("./docs/assets/ysu-bg.png");
+    background-size: cover, cover, cover;
+    background-position:center;
+    filter: saturate(1.05) contrast(1.03);
+    z-index:-1;
+  }
 
-    .scratch-holder{
-      position:absolute;
-      inset:64px 18px 18px 18px;   /* a bit more breathing space */
-      border-radius:16px;
-      overflow:hidden;
-      display:grid; place-items:center;
-      background:
-        linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,0)),
-        url("docs/assets/texture.png");
-    }
-    .result{ text-align:center; padding:18px; z-index:0; }
-    .result h2{ margin:.4em 0 .2em; font-size:clamp(22px,6vw,30px); letter-spacing:.06em; font-weight:800; }
-    .result .prize{ font-size:clamp(24px,7vw,36px); letter-spacing:.08em; font-weight:900; color:#ffd36c; text-shadow:0 2px 10px rgba(0,0,0,.35); }
-    .result .code{ margin-top:.3em; font-family: ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; font-size:clamp(14px,4vw,16px); letter-spacing:.06em; opacity:.92; word-break:break-all; }
-    .result .sorry{ font-size:clamp(26px,8vw,40px); letter-spacing:.12em; font-weight:900; color:#ffedf0; text-shadow:0 2px 10px rgba(0,0,0,.35); }
-    .hint{ margin-top:.5em; opacity:.8; font-size:clamp(12px,3.8vw,13px); }
+  .wrap{
+    min-height:100%;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    gap:18px;
+    padding:20px 14px 48px;
+  }
 
-    canvas#scratch{ position:absolute; inset:0; width:100%; height:100%; display:block; cursor:crosshair; touch-action:none; }
+  .brand{
+    margin-top:8px;
+    font-weight:700;
+    letter-spacing:.06em;
+    text-transform:uppercase;
+    font-size:14px;
+    display:flex;gap:8px;align-items:center;
+    opacity:.9;
+  }
+  .brand .dot{
+    width:8px;height:8px;border-radius:50%; background:#ff3355;
+    box-shadow:0 0 8px #ff3355aa;
+  }
 
-    .tag{
-      position:fixed; left:12px; bottom:12px;
-      background:rgba(0,0,0,.45);
-      padding:10px 12px;
-      border-radius:10px;
-      font-size:12px; line-height:1.2; letter-spacing:.03em; color:#ddd;
-    }
-    .btn{ display:inline-block; background:#ffffff10; border:1px solid #ffffff20; color:#fff; border-radius:12px; padding:10px 14px; font-size:13px; text-decoration:none; }
-  </style>
+  .card{
+    width:var(--card-w);
+    height:var(--card-h);
+    border-radius:18px;
+    background:
+      linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.02));
+    border:1px solid rgba(255,255,255,.08);
+    box-shadow:
+      0 20px 50px rgba(0,0,0,.55),
+      inset 0 1px 0 rgba(255,255,255,.04);
+    position:relative;
+    overflow:hidden;
+    display:grid;
+    place-items:center;
+  }
+
+  .result{
+    z-index:1;
+    text-align:center;
+    user-select:none;
+    pointer-events:none;
+  }
+  .result .label{
+    font-size: clamp(20px, 3.6vw, 40px);
+    letter-spacing:.2em;
+    font-weight:900;
+    text-transform:uppercase;
+    text-shadow:0 3px 12px rgba(0,0,0,.5);
+  }
+  .result .prize{
+    margin-top:.6rem;
+    font-size: clamp(14px, 2.6vw, 24px);
+    letter-spacing:.06em;
+    opacity:.92;
+  }
+  .result .code{
+    margin-top:.35rem;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+    font-size: clamp(12px, 2.2vw, 18px);
+    letter-spacing:.04em;
+    opacity:.85;
+  }
+
+  /* Gold scratch overlay (no seams) */
+  canvas#scratch{
+    position:absolute; inset:0;
+    width:100%; height:100%;
+    display:block;
+    cursor: crosshair;
+  }
+
+  .btnbar{
+    display:flex;
+    gap:10px;
+    align-items:center;
+    justify-content:center;
+    flex-wrap:wrap;
+    margin-top:8px;
+  }
+  .btn{
+    appearance:none;
+    border:none; border-radius:10px;
+    padding:10px 14px;
+    font-weight:650;
+    letter-spacing:.02em;
+    color:#0b1016;
+    background:#e2b857; /* gold */
+    box-shadow: 0 8px 18px #e2b85733, inset 0 1px 0 #fff3;
+    cursor:pointer;
+  }
+  .btn[hidden]{ display:none; }
+
+  .notice{
+    font-size:13px; opacity:.8; margin-top:6px;
+  }
+  .ribbon{
+    position:fixed; top:10px; left:50%;
+    transform:translateX(-50%);
+    background:#151b22; border:1px solid #ffffff14;
+    color:#e8edf6; padding:8px 12px; border-radius:10px;
+    font-size:13px; letter-spacing:.02em;
+    display:none; /* hidden by default on static site */
+  }
+  .already{
+    background:#1d242d;
+    border:1px solid #ffffff18;
+    padding:10px 12px; border-radius:10px;
+    margin-top:6px; font-size:14px; opacity:.92;
+  }
+</style>
 </head>
 <body>
+  <!-- kept hidden on a static site because we can’t know global claims -->
+  <div id="globalBanner" class="ribbon"></div>
+
   <div class="wrap">
-    <div id="soldoutBanner" class="soldout" hidden>🎉 All prize cards have been claimed! Follow @YSUHousing for the next giveaway.</div>
+    <div class="brand"><span class="dot"></span>YSU • PENGUIN GAMES</div>
 
     <div class="card" id="card">
-      <div class="brand">
-        <div class="dot"></div><h1>YSU • PENGUIN GAMES</h1>
+      <div class="result" id="result">
+        <div class="label" id="label">SCRATCH TO REVEAL</div>
+        <div class="prize" id="prize"></div>
+        <div class="code"  id="code"></div>
       </div>
+      <canvas id="scratch"></canvas>
+    </div>
 
-      <img class="penguin" src="docs/assets/penguin.png" alt="" />
+    <div class="already" id="already" hidden>
+      You already played on this device. Thanks for trying!
+    </div>
 
-      <div class="scratch-holder">
-        <div class="result" id="result"></div>
-        <canvas id="scratch"></canvas>
-      </div>
+    <div class="btnbar">
+      <button class="btn" id="resetBtn" hidden>Reset this device (debug)</button>
+      <button class="btn" id="rerollBtn" hidden>Re-roll (debug)</button>
+    </div>
+
+    <div class="notice">
+      Tip: Follow <strong>@YSUHousing</strong> for the next giveaway.
     </div>
   </div>
 
-  <div class="tag" id="replayNote" hidden>
-    You already played on this device.<br/>
-    <a class="btn" href="#" id="showPrev">Show my result</a>
-  </div>
+<script>
+/* ========================
+   Config
+======================== */
+const CSV_PATH = "./docs/decks/HRLVYPZ.csv"; // your uploaded file
+const TOTAL_CARDS = 50;                      // 20 winners + 30 “SORRY”
+const STORAGE_KEY = "pg_claim_v1";           // per-device stored result
 
-  <script>
-    /******** CONFIG ********/
-    const CSV_PATH = 'docs/decks/HRLVYPZ.csv';
-    const CLAIMED_FLAG = 'docs/decks/ALL_CLAIMED.flag';
-    const WIN_PROBABILITY = 0.4; // device-level odds when winners remain
+// Debug mode (add ?debug=1)
+const params = new URLSearchParams(location.search);
+const DEBUG = params.get("debug") === "1";
 
-    const LS_PLAYED   = 'pg_played_v1';
-    const LS_RESULT   = 'pg_result_v1';
-    const LS_USED_IDX = 'pg_used_idx_v1';
+/* ========================
+   Utilities
+======================== */
+const $ = sel => document.querySelector(sel);
+function shuffle(a){ for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; } return a; }
 
-    const $ = s => document.querySelector(s);
-
-    function csvToRows(text){
-      const lines = text.trim().split(/\r?\n/);
-      const hasHeader = /^prize\s*,\s*code/i.test(lines[0]);
-      const dataLines = hasHeader ? lines.slice(1) : lines;
-      return dataLines
-        .map(l => {
-          const [prize, code] = l.split(',').map(s=>s.trim());
-          return prize && code ? {prize, code} : null;
-        })
-        .filter(Boolean);
+/* ========================
+   Load winners from CSV
+======================== */
+async function loadWinners(){
+  try{
+    const res = await fetch(CSV_PATH, {cache:"no-store"});
+    if(!res.ok) throw new Error("CSV fetch failed");
+    const txt = await res.text();
+    const lines = txt.split(/\r?\n/).map(l=>l.trim()).filter(Boolean);
+    // Expect: PRIZE, CODE
+    const winners = [];
+    for(const line of lines){
+      const [prizeRaw, codeRaw] = line.split(",").map(s=>s?.trim());
+      if(!prizeRaw || !codeRaw) continue;
+      // keep the exact prize text for display; code as-is
+      winners.push({ prize: prizeRaw, code: codeRaw });
     }
-    function shuffle(a){ for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]];} return a; }
+    return winners;
+  }catch(err){
+    console.warn("CSV load error:", err);
+    return []; // fall back gracefully
+  }
+}
 
-    function drawResultDOM({type, prize, code}, opts={showHint:true}){
-      const res = $('#result'); res.innerHTML='';
-      if(type==='win'){
-        const h2 = document.createElement('h2'); h2.textContent='WINNER!';
-        const p  = document.createElement('div'); p.className='prize'; p.textContent=prize;
-        const c  = document.createElement('div'); c.className='code'; c.textContent=code;
-        res.append(h2,p,c);
-        if(opts.showHint){
-          const h = document.createElement('div'); h.className='hint';
-          h.textContent='Show this code to claim your prize. We’ll verify your post comment.';
-          res.append(h);
-        }
-      }else{
-        const s = document.createElement('div'); s.className='sorry'; s.textContent='SORRY!';
-        res.append(s);
-        if(opts.showHint){
-          const h = document.createElement('div'); h.className='hint';
-          h.textContent='Thanks for playing! Watch for the next race-to-housing game. 🐧';
-          res.append(h);
-        }
+/* ========================
+   Build a local deck
+   (static site = no global inventory)
+======================== */
+function buildLocalDeck(winners){
+  // winners array length = 20 from your CSV
+  const deck = [];
+  // push winners
+  for(const w of winners){ deck.push({type:"WIN", prize:w.prize, code:w.code}); }
+  // push losers to fill to 50 total
+  const losersNeeded = Math.max(0, TOTAL_CARDS - deck.length);
+  for(let i=0;i<losersNeeded;i++) deck.push({type:"LOSE"});
+  return shuffle(deck);
+}
+
+/* ========================
+   One play per device
+======================== */
+function getStored(){
+  try{ return JSON.parse(localStorage.getItem(STORAGE_KEY) || "null"); }
+  catch(e){ return null; }
+}
+function setStored(obj){
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(obj));
+}
+function clearStored(){
+  localStorage.removeItem(STORAGE_KEY);
+}
+
+/* ========================
+   Render result
+======================== */
+function showResult(obj){
+  const label = $("#label");
+  const prize = $("#prize");
+  const code  = $("#code");
+  if(obj.type === "WIN"){
+    label.textContent = "WIN!";
+    prize.textContent = obj.prize;
+    code.textContent  = obj.code;
+  }else{
+    label.textContent = "SORRY!";
+    prize.textContent = "";
+    code.textContent  = "";
+  }
+}
+
+/* ========================
+   Scratch overlay
+======================== */
+function drawGold(ctx, w, h){
+  // seamless gold texture via layered gradients
+  const grad1 = ctx.createLinearGradient(0,0,w,h);
+  grad1.addColorStop(0,  "#f3cf6b");
+  grad1.addColorStop(.45,"#b38728");
+  grad1.addColorStop(.55,"#ffe08a");
+  grad1.addColorStop(1,  "#9d7a2d");
+
+  ctx.fillStyle = grad1;
+  ctx.fillRect(0,0,w,h);
+
+  // noise overlay
+  const noise = ctx.createLinearGradient(0,h,0,0);
+  noise.addColorStop(0,"rgba(255,255,255,.08)");
+  noise.addColorStop(1,"rgba(0,0,0,.08)");
+  ctx.globalCompositeOperation="overlay";
+  ctx.fillStyle=noise;
+  ctx.fillRect(0,0,w,h);
+  ctx.globalCompositeOperation="source-over";
+}
+
+function initScratch(){
+  const c = $("#scratch");
+  const card = $("#card");
+  const rect = card.getBoundingClientRect();
+  c.width  = rect.width;
+  c.height = rect.height;
+
+  const ctx = c.getContext("2d");
+  drawGold(ctx, c.width, c.height);
+
+  let scratching = false;
+  function scratch(x,y){
+    ctx.globalCompositeOperation='destination-out';
+    ctx.beginPath();
+    ctx.arc(x, y, parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--overlay-dot'))/2, 0, Math.PI*2);
+    ctx.fill();
+    ctx.globalCompositeOperation='source-over';
+  }
+
+  c.addEventListener('pointerdown', e=>{ scratching=true; scratch(e.offsetX, e.offsetY); });
+  c.addEventListener('pointermove', e=>{ if(scratching) scratch(e.offsetX, e.offsetY); });
+  window.addEventListener('pointerup', ()=> scratching=false);
+
+  // Make overlay ignore events after ~60% cleared
+  let clearedCheck;
+  c.addEventListener('pointerup', ()=>{
+    clearTimeout(clearedCheck);
+    clearedCheck = setTimeout(()=>{
+      const pixels = ctx.getImageData(0,0,c.width,c.height).data;
+      let transparent = 0;
+      for(let i=3;i<pixels.length;i+=4){
+        if(pixels[i]===0) transparent++;
       }
-    }
-
-    function paintGold(ctx,w,h){
-      const grad = ctx.createLinearGradient(0,0,w,h);
-      grad.addColorStop(0,'#f4e3a2'); grad.addColorStop(0.25,'#d7bd6a');
-      grad.addColorStop(0.5,'#bfa04e'); grad.addColorStop(0.75,'#e0c66e'); grad.addColorStop(1,'#b08c3e');
-      ctx.fillStyle=grad; ctx.fillRect(0,0,w,h);
-      ctx.globalAlpha=.18;
-      for(let i=0;i<260;i++){
-        ctx.fillStyle='rgba(255,255,255,'+(Math.random()*0.25).toFixed(2)+')';
-        const x=Math.random()*w, y=Math.random()*h, r=Math.random()*3+.6;
-        ctx.beginPath(); ctx.arc(x,y,r,0,Math.PI*2); ctx.fill();
+      const percent = transparent / (c.width*c.height) * 100;
+      if(percent > 60){
+        c.style.pointerEvents = "none";
+        c.style.opacity = 0;
+        c.style.transition = "opacity .35s ease-out";
       }
-      ctx.globalAlpha=1;
-      ctx.fillStyle='rgba(0,0,0,.55)';
-      ctx.font='700 16px system-ui,-apple-system,Segoe UI,Roboto,Inter,Arial';
-      ctx.textAlign='center';
-      ctx.fillText('SCRATCH HERE', w/2, 28);
-    }
+    }, 80);
+  }, {passive:true});
+}
 
-    function enableScratch(revealCb){
-      const canvas=$('#scratch'), holder=canvas.parentElement;
-      const ctx = canvas.getContext('2d',{willReadFrequently:true});
-      const rect=()=>holder.getBoundingClientRect();
+/* ========================
+   Main
+======================== */
+(async function main(){
+  // Hide global claimed banner on static site
+  $("#globalBanner").style.display = "none";
 
-      function resize(){
-        const r=rect(); canvas.width=Math.floor(r.width); canvas.height=Math.floor(r.height);
-        paintGold(ctx, canvas.width, canvas.height);
-        ctx.globalCompositeOperation='destination-out';
-      }
-      resize(); addEventListener('resize', resize);
+  // Debug controls
+  if(DEBUG){
+    $("#resetBtn").hidden = false;
+    $("#rerollBtn").hidden = false;
+    $("#resetBtn").onclick = ()=>{ clearStored(); location.reload(); };
+    $("#rerollBtn").onclick = ()=>{ clearStored(); rollAndRender(true); };
+  }
 
-      let scratching=false; const brush=26;
-      function scratch(x,y){ ctx.beginPath(); ctx.arc(x,y,brush,0,Math.PI*2); ctx.fill(); }
-      function pctCleared(){
-        const d=ctx.getImageData(0,0,canvas.width,canvas.height).data; let clear=0;
-        for(let i=3;i<d.length;i+=4){ if(d[i]===0) clear++; }
-        return clear/(d.length/4);
-      }
-      const down=e=>{ scratching=true; const r=rect(); const x=(e.touches?e.touches[0].clientX:e.clientX)-r.left; const y=(e.touches?e.touches[0].clientY:e.clientY)-r.top; scratch(x,y); e.preventDefault(); };
-      const move=e=>{ if(!scratching) return; const r=rect(); const x=(e.touches?e.touches[0].clientX:e.clientX)-r.left; const y=(e.touches?e.touches[0].clientY:e.clientY)-r.top; scratch(x,y); if(pctCleared()>0.55){ canvas.style.pointerEvents='none'; canvas.style.opacity='0'; revealCb(); } e.preventDefault(); };
-      const up=()=>scratching=false;
+  // If already played on this device, show stored & disable overlay
+  const existing = getStored();
+  if(existing){
+    showResult(existing);
+    $("#already").hidden = false;
+    // disable scratching
+    $("#scratch").style.pointerEvents="none";
+    $("#scratch").style.opacity=0;
+    return;
+  }
 
-      canvas.addEventListener('mousedown',down); canvas.addEventListener('mousemove',move); addEventListener('mouseup',up);
-      canvas.addEventListener('touchstart',down,{passive:false}); canvas.addEventListener('touchmove',move,{passive:false}); addEventListener('touchend',up);
-    }
+  // Not played: roll & render
+  await rollAndRender(false);
+})();
 
-    (async function main(){
-      // SOLD OUT flag? (optional but simple: create docs/decks/ALL_CLAIMED.flag)
-      const soldOutFlag = await fetch(CLAIMED_FLAG, {cache:'no-store'}).then(r=>r.ok).catch(()=>false);
+async function rollAndRender(isDebug){
+  const winners = await loadWinners();
+  const deck    = buildLocalDeck(winners);
 
-      // If already played, offer to show past result
-      const played = localStorage.getItem(LS_PLAYED)==='1';
-      const prev   = localStorage.getItem(LS_RESULT);
-      if(played && prev){
-        $('#replayNote').hidden=false;
-        $('#showPrev').addEventListener('click',e=>{
-          e.preventDefault();
-          drawResultDOM(JSON.parse(prev), {showHint:true});
-          const sc=$('#scratch'); sc.style.opacity='0'; sc.style.pointerEvents='none';
-        });
-      }
+  // Draw scratch overlay
+  initScratch();
 
-      // Load winners CSV (to know if any exist)
-      let winners=[];
-      try{
-        const res = await fetch(''+CSV_PATH+'?v='+Date.now());
-        if(res.ok){
-          const txt = await res.text();
-          winners = csvToRows(txt);
-        }
-      }catch(e){ /* ignore offline */ }
+  // Random pick (mix of winners/losers)
+  const pick = deck[Math.floor(Math.random()*deck.length)] || {type:"LOSE"};
 
-      const csvEmpty = winners.length===0;
+  // If winner: ensure we have a code/prize (fallback safe)
+  let result = pick;
+  if(pick.type==="WIN"){
+    // if somehow missing prize/code, fallback to LOSER to avoid empty UI
+    if(!pick.prize || !pick.code) result = {type:"LOSE"};
+  }
 
-      // If SOLD OUT (flag or empty CSV), show banner and disable scratching
-      if(soldOutFlag || csvEmpty){
-        $('#soldoutBanner').hidden=false;
-        drawResultDOM({type:'sorry'},{showHint:false});
-        const sc=$('#scratch');
-        sc.style.opacity='0'; sc.style.pointerEvents='none';
-        return;
-      }
+  // Render immediately (under the gold)
+  showResult(result);
 
-      // Otherwise prepare sealed card, decide on reveal
-      const decideOnce = (function(){
-        let decided=false;
-        return function(){
-          if(decided) return; decided=true;
-
-          const usedIdx = JSON.parse(localStorage.getItem(LS_USED_IDX)||'[]');
-          const available = winners
-            .map((r,i)=>({...r,_idx:i}))
-            .filter(r=>!usedIdx.includes(r._idx));
-
-          let result;
-          if(available.length>0 && Math.random()<WIN_PROBABILITY){
-            shuffle(available);
-            const pick=available[0];
-            result={type:'win', prize:pick.prize, code:pick.code};
-            usedIdx.push(pick._idx);
-            localStorage.setItem(LS_USED_IDX, JSON.stringify(usedIdx));
-          }else{
-            result={type:'sorry'};
-          }
-          localStorage.setItem(LS_RESULT, JSON.stringify(result));
-          localStorage.setItem(LS_PLAYED, '1');
-          drawResultDOM(result,{showHint:true});
-        };
-      })();
-
-      drawResultDOM({type:'sorry'},{showHint:false}); // hidden placeholder
-      enableScratch(decideOnce);
-    })();
-  </script>
+  // On a real play (not debug), store and lock this device
+  if(!isDebug){
+    setStored(result);
+  }
+}
+</script>
 </body>
 </html>
