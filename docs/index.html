@@ -1,248 +1,279 @@
 <!doctype html>
 <html lang="en">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>Penguin Games — Scratch to Reveal</title>
-<style>
-  :root{
-    --bg:#0b132b; --card:#0f1a3a; --text:#eef3ff; --muted:#a7b3c8;
-    --win:#22c55e; --lose:#ef4444; --accent:#ffd34d;
-  }
-  *{box-sizing:border-box}
-  body{
-    margin:0; min-height:100dvh; display:grid; place-items:center; padding:24px;
-    background:var(--bg); color:var(--text); font-family:system-ui,-apple-system,Segoe UI,Roboto,Inter,sans-serif;
-  }
-  .wrap{width:100%; max-width:720px}
-  header{display:flex; gap:12px; align-items:center; margin-bottom:12px}
-  .logo{width:44px;height:44px;border-radius:12px;background:var(--accent);display:grid;place-items:center;color:#111;font-weight:900}
-  h1{margin:0;font-size:24px}
-  .muted{color:var(--muted)}
-  .card{background:var(--card); border:1px solid #ffffff1a; border-radius:18px; padding:18px; box-shadow:0 12px 28px rgba(0,0,0,.35)}
-  .meta{display:flex; flex-wrap:wrap; gap:10px; font-size:13px; margin-bottom:8px}
-  .pill{background:#ffffff10; padding:6px 10px; border-radius:999px}
-  .stage{
-    position:relative; width:100%; aspect-ratio:16/9; border-radius:14px; overflow:hidden; margin:10px 0;
-    border:1px solid #ffffff12; background:#000 center/cover no-repeat;
-    display:grid; place-items:center;
-  }
-  .reveal{text-align:center; padding:14px; text-shadow:0 2px 18px rgba(0,0,0,.45)}
-  .big{font-size:clamp(24px,5vw,40px); font-weight:900; letter-spacing:.3px}
-  .t-win{color:var(--win)} .t-lose{color:var(--lose)}
-  .note{font-size:12px; color:var(--muted); margin-top:6px}
-  canvas{position:absolute; inset:0; width:100%; height:100%; display:block}
-  .wm{position:absolute; right:10px; bottom:10px; font-size:10px; color:#000b; background:#fffb; padding:4px 6px; border-radius:6px}
-  .hidden{display:none}
-</style>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Penguin Scratch</title>
+  <style>
+    :root{
+      /* Larger, fuller card */
+      --card-w: min(96vw, 640px);
+      --card-h: min(76vh, calc(var(--card-w) * 0.68));
+
+      --ysu-red:#a00010;
+    }
+    html,body{
+      margin:0;
+      padding:0;
+      background:#0b0f17;
+      color:#fff;
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Inter, Arial, sans-serif;
+    }
+    .wrap{
+      min-height:100dvh;
+      display:grid;
+      place-items:center;
+      padding:24px 16px;
+      background:
+        radial-gradient(50% 50% at 100% 0%, rgba(160,0,16,0.12) 0%, transparent 60%),
+        radial-gradient(50% 50% at 0% 100%, rgba(202,162,74,0.12) 0%, transparent 60%),
+        #0b0f17 url("docs/assets/ysu_bg.png") center/cover no-repeat;
+    }
+    .soldout{
+      position:fixed;
+      top:10px; left:50%;
+      transform:translateX(-50%);
+      background:#fff2;
+      border:1px solid #fff3;
+      padding:10px 14px;
+      border-radius:12px;
+      font-size:14px;
+      backdrop-filter: blur(6px);
+      z-index:3;
+    }
+    .card{
+      width:var(--card-w);
+      height:var(--card-h);
+      border-radius:22px;
+      background:#151a26;
+      box-shadow: 0 18px 40px rgba(0,0,0,.5), inset 0 0 0 2px rgba(255,255,255,.06);
+      position:relative;
+      overflow:hidden;
+    }
+    .brand{
+      position:absolute;
+      inset:16px 16px auto 16px;
+      display:flex; align-items:center; gap:10px;
+      user-select:none; pointer-events:none;
+      text-shadow:0 2px 10px rgba(0,0,0,.5);
+    }
+    .brand .dot{ width:10px; height:10px; border-radius:50%; background:var(--ysu-red); box-shadow:0 0 16px rgba(160,0,16,.6); }
+    .brand h1{ margin:0; font-size:17px; letter-spacing:.08em; text-transform:uppercase; }
+
+    .penguin{ position:absolute; right:-4%; bottom:-2%; width:36%; opacity:.9; filter: drop-shadow(0 10px 25px rgba(0,0,0,.5)); }
+
+    .scratch-holder{
+      position:absolute;
+      inset:64px 18px 18px 18px;   /* a bit more breathing space */
+      border-radius:16px;
+      overflow:hidden;
+      display:grid; place-items:center;
+      background:
+        linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,0)),
+        url("docs/assets/texture.png");
+    }
+    .result{ text-align:center; padding:18px; z-index:0; }
+    .result h2{ margin:.4em 0 .2em; font-size:clamp(22px,6vw,30px); letter-spacing:.06em; font-weight:800; }
+    .result .prize{ font-size:clamp(24px,7vw,36px); letter-spacing:.08em; font-weight:900; color:#ffd36c; text-shadow:0 2px 10px rgba(0,0,0,.35); }
+    .result .code{ margin-top:.3em; font-family: ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; font-size:clamp(14px,4vw,16px); letter-spacing:.06em; opacity:.92; word-break:break-all; }
+    .result .sorry{ font-size:clamp(26px,8vw,40px); letter-spacing:.12em; font-weight:900; color:#ffedf0; text-shadow:0 2px 10px rgba(0,0,0,.35); }
+    .hint{ margin-top:.5em; opacity:.8; font-size:clamp(12px,3.8vw,13px); }
+
+    canvas#scratch{ position:absolute; inset:0; width:100%; height:100%; display:block; cursor:crosshair; touch-action:none; }
+
+    .tag{
+      position:fixed; left:12px; bottom:12px;
+      background:rgba(0,0,0,.45);
+      padding:10px 12px;
+      border-radius:10px;
+      font-size:12px; line-height:1.2; letter-spacing:.03em; color:#ddd;
+    }
+    .btn{ display:inline-block; background:#ffffff10; border:1px solid #ffffff20; color:#fff; border-radius:12px; padding:10px 14px; font-size:13px; text-decoration:none; }
+  </style>
 </head>
 <body>
   <div class="wrap">
-    <header>
-      <div class="logo">🐧</div>
-      <div>
-        <h1>Penguin Games — Scratch & Reveal</h1>
-        <div class="muted">Scratch the gold layer to reveal your result. One device = one card per event.</div>
-      </div>
-    </header>
+    <div id="soldoutBanner" class="soldout" hidden>🎉 All prize cards have been claimed! Follow @YSUHousing for the next giveaway.</div>
 
-    <div class="card">
-      <div class="meta">
-        <div class="pill" id="pillEvent">Event: —</div>
-        <div class="pill">This device locks after reveal</div>
+    <div class="card" id="card">
+      <div class="brand">
+        <div class="dot"></div><h1>YSU • PENGUIN GAMES</h1>
       </div>
 
-      <div class="stage" id="stage">
-        <!-- Revealed content (beneath overlay) -->
-        <div class="reveal">
-          <div class="muted">Your result:</div>
-          <div class="big" id="prize">—</div>
-          <div class="muted" style="margin-top:6px">Claim code:</div>
-          <div class="big" id="code">—</div>
-        </div>
+      <img class="penguin" src="docs/assets/penguin.png" alt="" />
 
-        <!-- Gold scratch overlay -->
-        <canvas id="overlay"></canvas>
-        <div class="wm">Penguin Games</div>
+      <div class="scratch-holder">
+        <div class="result" id="result"></div>
+        <canvas id="scratch"></canvas>
       </div>
-
-      <div id="already" class="note hidden">You already scratched on this device for this event. Your result is unchanged.</div>
-      <div class="note">Only claims from the official FB post are valid. We verify account + code.</div>
     </div>
   </div>
 
-<script>
-/* =========================
-   CONFIG
-   ========================= */
-// Replace with an image in your repo when ready, e.g. "./assets/ysu-bg.jpg"
-const BACKGROUND_IMAGE_URL = "https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?q=80&w=1600&auto=format&fit=crop";
-const WIN_PROBABILITY = 0.20;  // 20% chance per device
-const EVENT_MODE = "auto-week"; // "auto-week" | "auto-day" | "fixed"
-const FIXED_EVENT_ID = "ysu-event-1"; // used only if EVENT_MODE="fixed"
+  <div class="tag" id="replayNote" hidden>
+    You already played on this device.<br/>
+    <a class="btn" href="#" id="showPrev">Show my result</a>
+  </div>
 
-// Prize mix when a device wins
-const PRIZES = [
-  {label:"WATER BOTTLE", weight:7},
-  {label:"CROSS BAG",    weight:8},
-  {label:"LANYARD",      weight:5}
-];
+  <script>
+    /******** CONFIG ********/
+    const CSV_PATH = 'docs/decks/HRLVYPZ.csv';
+    const CLAIMED_FLAG = 'docs/decks/ALL_CLAIMED.flag';
+    const WIN_PROBABILITY = 0.4; // device-level odds when winners remain
 
-/* =========================
-   EVENT KEY (auto reset)
-   ========================= */
-function getEventId(){
-  const url = new URL(location.href);
-  const override = url.searchParams.get("event");
-  if (override) return `ev-${override}`;
-  const d = new Date();
-  if (EVENT_MODE==="auto-day") {
-    const y=d.getUTCFullYear(), m=String(d.getUTCMonth()+1).padStart(2,'0'), day=String(d.getUTCDate()).padStart(2,'0');
-    return `ev-${y}${m}${day}`;
-  }
-  if (EVENT_MODE==="auto-week"){
-    const tmp=new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()));
-    const dayNum=(tmp.getUTCDay()+6)%7;
-    tmp.setUTCDate(tmp.getUTCDate()-dayNum+3);
-    const firstThursday=new Date(Date.UTC(tmp.getUTCFullYear(),0,4));
-    const week=1+Math.round(((tmp-firstThursday)/86400000-3+((firstThursday.getUTCDay()+6)%7))/7);
-    return `ev-${d.getUTCFullYear()}-w${String(week).padStart(2,"0")}`;
-  }
-  return `ev-${FIXED_EVENT_ID}`;
-}
-const EVENT_ID = getEventId();
-document.getElementById('pillEvent').textContent = `Event: ${EVENT_ID}`;
+    const LS_PLAYED   = 'pg_played_v1';
+    const LS_RESULT   = 'pg_result_v1';
+    const LS_USED_IDX = 'pg_used_idx_v1';
 
-/* =========================
-   ONE PLAY PER DEVICE
-   ========================= */
-const PLAY_KEY = `pg_play_${EVENT_ID}`;
-let stored = null;
-try { stored = localStorage.getItem(PLAY_KEY); } catch(e){}
-let result;
+    const $ = s => document.querySelector(s);
 
-function secureRandomCode(len=6){
-  const chars="ABCDEFGHJKMNPQRSTUVWXYZ23456789";
-  let out="YSU-";
-  if (typeof window !== "undefined" && window.crypto && crypto.getRandomValues) {
-    const buf=new Uint32Array(len);
-    crypto.getRandomValues(buf);
-    for (let i=0;i<len;i++) out += chars[buf[i]%chars.length];
-  } else {
-    for (let i=0;i<len;i++) out += chars[Math.floor(Math.random()*chars.length)];
-  }
-  return out;
-}
+    function csvToRows(text){
+      const lines = text.trim().split(/\r?\n/);
+      const hasHeader = /^prize\s*,\s*code/i.test(lines[0]);
+      const dataLines = hasHeader ? lines.slice(1) : lines;
+      return dataLines
+        .map(l => {
+          const [prize, code] = l.split(',').map(s=>s.trim());
+          return prize && code ? {prize, code} : null;
+        })
+        .filter(Boolean);
+    }
+    function shuffle(a){ for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]];} return a; }
 
-function pickPrizeWeighted(){
-  const total = PRIZES.reduce((a,p)=>a+p.weight,0);
-  let r = Math.random()*total;
-  for (const p of PRIZES){ if (r < p.weight) return p.label; r -= p.weight; }
-  return PRIZES[0].label; // fallback
-}
+    function drawResultDOM({type, prize, code}, opts={showHint:true}){
+      const res = $('#result'); res.innerHTML='';
+      if(type==='win'){
+        const h2 = document.createElement('h2'); h2.textContent='WINNER!';
+        const p  = document.createElement('div'); p.className='prize'; p.textContent=prize;
+        const c  = document.createElement('div'); c.className='code'; c.textContent=code;
+        res.append(h2,p,c);
+        if(opts.showHint){
+          const h = document.createElement('div'); h.className='hint';
+          h.textContent='Show this code to claim your prize. We’ll verify your post comment.';
+          res.append(h);
+        }
+      }else{
+        const s = document.createElement('div'); s.className='sorry'; s.textContent='SORRY!';
+        res.append(s);
+        if(opts.showHint){
+          const h = document.createElement('div'); h.className='hint';
+          h.textContent='Thanks for playing! Watch for the next race-to-housing game. 🐧';
+          res.append(h);
+        }
+      }
+    }
 
-// Use saved result if present (prevents replay on this device)
-if (stored){
-  try { result = JSON.parse(stored); } catch(e){ result = null; }
-}
-if (!result){
-  const win = Math.random() < WIN_PROBABILITY;
-  result = {
-    prize: win ? pickPrizeWeighted() : "SORRY",
-    code: secureRandomCode()
-  };
-  try { localStorage.setItem(PLAY_KEY, JSON.stringify(result)); } catch(e){}
-}
+    function paintGold(ctx,w,h){
+      const grad = ctx.createLinearGradient(0,0,w,h);
+      grad.addColorStop(0,'#f4e3a2'); grad.addColorStop(0.25,'#d7bd6a');
+      grad.addColorStop(0.5,'#bfa04e'); grad.addColorStop(0.75,'#e0c66e'); grad.addColorStop(1,'#b08c3e');
+      ctx.fillStyle=grad; ctx.fillRect(0,0,w,h);
+      ctx.globalAlpha=.18;
+      for(let i=0;i<260;i++){
+        ctx.fillStyle='rgba(255,255,255,'+(Math.random()*0.25).toFixed(2)+')';
+        const x=Math.random()*w, y=Math.random()*h, r=Math.random()*3+.6;
+        ctx.beginPath(); ctx.arc(x,y,r,0,Math.PI*2); ctx.fill();
+      }
+      ctx.globalAlpha=1;
+      ctx.fillStyle='rgba(0,0,0,.55)';
+      ctx.font='700 16px system-ui,-apple-system,Segoe UI,Roboto,Inter,Arial';
+      ctx.textAlign='center';
+      ctx.fillText('SCRATCH HERE', w/2, 28);
+    }
 
-/* =========================
-   UI
-   ========================= */
-const stage = document.getElementById('stage');
-stage.style.backgroundImage = `url("${BACKGROUND_IMAGE_URL}")`;
+    function enableScratch(revealCb){
+      const canvas=$('#scratch'), holder=canvas.parentElement;
+      const ctx = canvas.getContext('2d',{willReadFrequently:true});
+      const rect=()=>holder.getBoundingClientRect();
 
-const prizeEl = document.getElementById('prize');
-const codeEl  = document.getElementById('code');
-const already = document.getElementById('already');
+      function resize(){
+        const r=rect(); canvas.width=Math.floor(r.width); canvas.height=Math.floor(r.height);
+        paintGold(ctx, canvas.width, canvas.height);
+        ctx.globalCompositeOperation='destination-out';
+      }
+      resize(); addEventListener('resize', resize);
 
-prizeEl.textContent = result.prize === "SORRY" ? "😅 SORRY" : "🎉 " + result.prize;
-prizeEl.classList.add(result.prize === "SORRY" ? "t-lose" : "t-win");
-codeEl.textContent = result.code;
+      let scratching=false; const brush=26;
+      function scratch(x,y){ ctx.beginPath(); ctx.arc(x,y,brush,0,Math.PI*2); ctx.fill(); }
+      function pctCleared(){
+        const d=ctx.getImageData(0,0,canvas.width,canvas.height).data; let clear=0;
+        for(let i=3;i<d.length;i+=4){ if(d[i]===0) clear++; }
+        return clear/(d.length/4);
+      }
+      const down=e=>{ scratching=true; const r=rect(); const x=(e.touches?e.touches[0].clientX:e.clientX)-r.left; const y=(e.touches?e.touches[0].clientY:e.clientY)-r.top; scratch(x,y); e.preventDefault(); };
+      const move=e=>{ if(!scratching) return; const r=rect(); const x=(e.touches?e.touches[0].clientX:e.clientX)-r.left; const y=(e.touches?e.touches[0].clientY:e.clientY)-r.top; scratch(x,y); if(pctCleared()>0.55){ canvas.style.pointerEvents='none'; canvas.style.opacity='0'; revealCb(); } e.preventDefault(); };
+      const up=()=>scratching=false;
 
-if (stored) already.classList.remove('hidden');
+      canvas.addEventListener('mousedown',down); canvas.addEventListener('mousemove',move); addEventListener('mouseup',up);
+      canvas.addEventListener('touchstart',down,{passive:false}); canvas.addEventListener('touchmove',move,{passive:false}); addEventListener('touchend',up);
+    }
 
-/* =========================
-   GOLD SCRATCH OVERLAY
-   ========================= */
-const cvs = document.getElementById('overlay');
-const ctx = cvs.getContext('2d');
-let down=false, revealed=false;
+    (async function main(){
+      // SOLD OUT flag? (optional but simple: create docs/decks/ALL_CLAIMED.flag)
+      const soldOutFlag = await fetch(CLAIMED_FLAG, {cache:'no-store'}).then(r=>r.ok).catch(()=>false);
 
-function sizeCanvas(){
-  const r = stage.getBoundingClientRect();
-  cvs.width  = Math.round(r.width  * (window.devicePixelRatio || 1));
-  cvs.height = Math.round(r.height * (window.devicePixelRatio || 1));
-  cvs.style.width  = r.width + 'px';
-  cvs.style.height = r.height + 'px';
-  ctx.setTransform((window.devicePixelRatio || 1),0,0,(window.devicePixelRatio || 1),0,0);
-  drawGold(r.width, r.height);
-}
-function drawGold(w,h){
-  // Clean gold gradient (no stripes)
-  const g1 = ctx.createLinearGradient(0,0,w,h);
-  g1.addColorStop(0.00,"#b8860b");
-  g1.addColorStop(0.25,"#ffd700");
-  g1.addColorStop(0.50,"#fff8dc");
-  g1.addColorStop(0.75,"#ffd700");
-  g1.addColorStop(1.00,"#b8860b");
-  ctx.globalCompositeOperation="source-over";
-  ctx.fillStyle=g1; ctx.fillRect(0,0,w,h);
+      // If already played, offer to show past result
+      const played = localStorage.getItem(LS_PLAYED)==='1';
+      const prev   = localStorage.getItem(LS_RESULT);
+      if(played && prev){
+        $('#replayNote').hidden=false;
+        $('#showPrev').addEventListener('click',e=>{
+          e.preventDefault();
+          drawResultDOM(JSON.parse(prev), {showHint:true});
+          const sc=$('#scratch'); sc.style.opacity='0'; sc.style.pointerEvents='none';
+        });
+      }
 
-  // Title on top of gold
-  ctx.globalCompositeOperation="source-over";
-  ctx.font = `800 ${Math.max(20, Math.floor(w*0.06))}px Inter, system-ui, sans-serif`;
-  ctx.textAlign="center"; ctx.textBaseline="middle";
-  ctx.fillStyle="rgba(0,0,0,.35)";
-  ctx.fillText("SCRATCH TO REVEAL", w/2, h/2);
+      // Load winners CSV (to know if any exist)
+      let winners=[];
+      try{
+        const res = await fetch(''+CSV_PATH+'?v='+Date.now());
+        if(res.ok){
+          const txt = await res.text();
+          winners = csvToRows(txt);
+        }
+      }catch(e){ /* ignore offline */ }
 
-  // Now switch to erase on touch/mouse
-  ctx.globalCompositeOperation="destination-out";
-}
-function pos(e){
-  const r = cvs.getBoundingClientRect();
-  const t = e.touches ? e.touches[0] : e;
-  return { x: t.clientX - r.left, y: t.clientY - r.top };
-}
-function scratch(e){
-  const p = pos(e);
-  const dpr = (window.devicePixelRatio || 1);
-  const rad = Math.max(18, (cvs.width/dpr)*0.035);
-  ctx.beginPath(); ctx.arc(p.x, p.y, rad, 0, Math.PI*2); ctx.fill();
-}
-function scratched(){
-  // estimate cleared %
-  const dpr = (window.devicePixelRatio || 1);
-  const w = Math.round(cvs.width/dpr), h = Math.round(cvs.height/dpr);
-  const img = ctx.getImageData(0,0,w,h).data;
-  let clear=0,total=0, step=24*4;
-  for (let i=3;i<img.length;i+=step){ if (img[i]===0) clear++; total++; }
-  return clear/total;
-}
-function tryReveal(){
-  if (!revealed && scratched()>0.45){
-    revealed = true;
-    ctx.globalCompositeOperation="destination-out";
-    ctx.fillRect(0,0,cvs.width,cvs.height);
-  }
-}
+      const csvEmpty = winners.length===0;
 
-cvs.addEventListener("mousedown", e=>{down=true; scratch(e);});
-cvs.addEventListener("mousemove", e=>{if(down){scratch(e); tryReveal();}});
-window.addEventListener("mouseup", ()=>{down=false;});
-cvs.addEventListener("touchstart", e=>{down=true; scratch(e);},{passive:true});
-cvs.addEventListener("touchmove", e=>{if(down){scratch(e); tryReveal();}},{passive:true});
-cvs.addEventListener("touchend", ()=>{down=false;});
-window.addEventListener("resize", sizeCanvas);
-sizeCanvas();
-</script>
+      // If SOLD OUT (flag or empty CSV), show banner and disable scratching
+      if(soldOutFlag || csvEmpty){
+        $('#soldoutBanner').hidden=false;
+        drawResultDOM({type:'sorry'},{showHint:false});
+        const sc=$('#scratch');
+        sc.style.opacity='0'; sc.style.pointerEvents='none';
+        return;
+      }
+
+      // Otherwise prepare sealed card, decide on reveal
+      const decideOnce = (function(){
+        let decided=false;
+        return function(){
+          if(decided) return; decided=true;
+
+          const usedIdx = JSON.parse(localStorage.getItem(LS_USED_IDX)||'[]');
+          const available = winners
+            .map((r,i)=>({...r,_idx:i}))
+            .filter(r=>!usedIdx.includes(r._idx));
+
+          let result;
+          if(available.length>0 && Math.random()<WIN_PROBABILITY){
+            shuffle(available);
+            const pick=available[0];
+            result={type:'win', prize:pick.prize, code:pick.code};
+            usedIdx.push(pick._idx);
+            localStorage.setItem(LS_USED_IDX, JSON.stringify(usedIdx));
+          }else{
+            result={type:'sorry'};
+          }
+          localStorage.setItem(LS_RESULT, JSON.stringify(result));
+          localStorage.setItem(LS_PLAYED, '1');
+          drawResultDOM(result,{showHint:true});
+        };
+      })();
+
+      drawResultDOM({type:'sorry'},{showHint:false}); // hidden placeholder
+      enableScratch(decideOnce);
+    })();
+  </script>
 </body>
 </html>
