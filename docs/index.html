@@ -11,7 +11,7 @@
   :root{
     --card-w: min(92vw, 980px);
     --card-h: clamp(380px, 56vw, 640px);
-    --overlay-dot: 72px; /* NOT USED DIRECTLY, FOR REFERENCE ONLY */
+    --overlay-dot: 72px;
   }
 
   html,body{
@@ -22,7 +22,6 @@
     font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji","Segoe UI Emoji";
   }
 
-  /* Background */
   body::before{
     content:"";
     position:fixed; inset:0;
@@ -59,7 +58,6 @@
     box-shadow:0 0 10px #ff3355aa;
   }
 
-  /* CARD with image behind the scratch */
   .card{
     position:relative;
     width:var(--card-w);
@@ -73,7 +71,7 @@
 
   .result{
     position:absolute; inset:0;
-    z-index:2; /* UNDER the canvas */
+    z-index:2;
     display:grid; place-items:center;
     text-align:center; padding:0 16px;
     user-select:none; pointer-events:none;
@@ -104,19 +102,18 @@
 
   .hint{
     position:absolute; left:50%; bottom:16px; transform:translateX(-50%);
-    z-index:4; /* ABOVE canvas */
+    z-index:4;
     font-size: clamp(16px, 2.2vw, 20px);
     letter-spacing:.08em; opacity:.95;
     text-shadow:0 2px 8px rgba(0,0,0,.6);
     pointer-events:none;
   }
 
-  /* SCRATCH overlay on top */
   canvas#scratch{
     position:absolute; inset:0;
     width:100%; height:100%;
     display:block; cursor:crosshair;
-    z-index:3; /* top */
+    z-index:3;
   }
 
   .btnbar{
@@ -201,12 +198,11 @@
 
 <script>
 /* ============= Config ============= */
-const CSV_PATH    = "./decks/HRLVYPZ.csv"; // REAL winners (PRIZE,CODE)
-const TOTAL_CARDS = 50;                    // winners + “SORRY”
-const STORAGE_KEY = "pg_claim_v1";         // per-device stored result
+const CSV_PATH    = "./decks/HRLVYPZ.csv";
+const TOTAL_CARDS = 50;
+const STORAGE_KEY = "pg_claim_v1";
 const SCRIPT_URL  = "https://script.google.com/macros/s/AKfycbyxXG0lqYRWF-yNl72EXjmck-U4xU-aTR8OvPtvPw9D1XwPEJ317mELPk55QpEa0ilArQ/exec";
 
-// Debug: add ?debug=1 — shows real winners/codes but NEVER calls the Sheet
 const params = new URLSearchParams(location.search);
 const DEBUG = params.get("debug") === "1";
 
@@ -262,8 +258,8 @@ function renderResultText(obj){
 }
 
 /* ============= Scratch overlay ============= */
-const BRUSH_PX = 72;            // bigger brush = easier scratch
-const REVEAL_THRESHOLD = 0.32;  // ~32% cleared triggers reveal
+const BRUSH_PX = 72;
+const REVEAL_THRESHOLD = 0.32;
 
 function drawGold(ctx, w, h){
   const g1 = ctx.createLinearGradient(0,0,w,h);
@@ -324,14 +320,11 @@ function initScratch(onReveal){
   function moveH(e){ if(!down) return; const p = pos(e); scratchAt(p.x,p.y); }
   function upH(){
     down = false; last = null;
-
-    // sample for speed: every 8th pixel (4 * 8)
     const {width, height} = canvas;
     const data = ctx.getImageData(0,0,width,height).data;
     let clear=0, total=0;
     for(let i=3;i<data.length;i+=32){ total++; if(data[i]===0) clear++; }
     const cleared = clear/total;
-
     if(!revealed && cleared >= REVEAL_THRESHOLD){
       revealed = true;
       result.classList.add("revealed");
@@ -361,7 +354,7 @@ function initScratch(onReveal){
   };
 }
 
-/* ===== SOLD OUT UI (shows on the card, not a banner) ===== */
+/* ===== SOLD OUT UI ===== */
 function showSoldOutUI() {
   const label  = document.querySelector("#label");
   const prize  = document.querySelector("#prize");
@@ -376,16 +369,15 @@ function showSoldOutUI() {
   if (code)  code.textContent  = "";
 
   if (result) {
-    result.classList.add("revealed");   // ensure text shows
-    result.classList.add("soldout");    // optional styling hook
+    result.classList.add("revealed");
+    result.classList.add("soldout");
   }
 
   if (hint)   hint.style.display = "none";
   if (canvas) { canvas.style.pointerEvents = "none"; canvas.style.opacity = 0; }
-
   if (banner) banner.style.display = "none";
 
-  try { localStorage.removeItem("pg_claim_v1"); } catch {}
+  try { localStorage.removeItem(STORAGE_KEY); } catch {}
 }
 
 /* ============= Flow ============= */
@@ -427,7 +419,6 @@ async function rollAndRender(isDebug){
         claimCodeJSONP(pick.code, (res)=>{
           window.__claiming = false;
 
-          // SOLD OUT check — show UI on the card and stop
           if(res && res.soldOut){
             showSoldOutUI();
             return;
@@ -435,9 +426,12 @@ async function rollAndRender(isDebug){
 
           if(res && res.ok){
             setStored(pick);
+          }else if(res && res.message === "already claimed"){
+            // Graceful retry: still count as WIN
+            setStored(pick);
           }else{
-            renderResultText({type:"LOSE"});
-            setStored({type:"LOSE"});
+            alert("There was a problem claiming your prize. Please try again or show staff.");
+            setStored(pick);
           }
         });
       }else{
